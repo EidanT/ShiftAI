@@ -1,0 +1,7 @@
+/* ShiftAI — Configuración del Sistema (estilos extra mínimos) */
+/* El render lo provee shared/future-module.js; aquí solo refuerzos puntuales. */
+
+/* Asegura el acento de marca en los checkboxes deshabilitados del TSX. */
+input[type="checkbox"] {
+  accent-color: #6366F1;
+}

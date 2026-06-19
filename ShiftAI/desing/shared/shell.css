@@ -1,0 +1,93 @@
+/* ============================================================================
+   ShiftAI — Shell compartido (sidebar + header + main + animaciones)
+   Migración del layout de ShiftAI/src/App.tsx, Sidebar.tsx y Header.tsx.
+   Cada pantalla enlaza este archivo además del Tailwind CDN y su propio style.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+:root {
+  --color-ink: #0F172A;
+  --color-brand: #6366F1;
+  --color-emerald: #10B981;
+  --color-amber: #F59E0B;
+  --color-rose: #E11D48;
+  --color-canvas: #F8FAFC;
+  --color-border: #E2E8F0;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+
+  --sidebar-w: 260px;   /* w-64 */
+  --sidebar-w-collapsed: 80px; /* w-20 */
+  --header-h: 64px;     /* h-16 */
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, select, textarea { font-family: inherit; }
+p { margin: 0; }
+
+/* ----------------------------- Layout shell ------------------------------- */
+#app-layout { min-height: 100vh; }
+
+#sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  height: 100vh;
+  width: var(--sidebar-w);
+  transition: width .3s ease;
+  z-index: 50;
+  overflow: hidden;
+}
+#header {
+  position: fixed;
+  top: 0; right: 0;
+  left: var(--sidebar-w);
+  height: var(--header-h);
+  transition: left .3s ease;
+  z-index: 40;
+}
+#main {
+  padding-left: var(--sidebar-w);
+  padding-top: var(--header-h);
+  min-height: 100vh;
+  transition: padding-left .3s ease;
+}
+
+/* Sidebar colapsado */
+body.sidebar-collapsed { --sidebar-w: var(--sidebar-w-collapsed); }
+body.sidebar-collapsed #sidebar .label,
+body.sidebar-collapsed #sidebar .cat-label { display: none; }
+
+/* ------------------------------ Animaciones ------------------------------- */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spinSlow { to { transform: rotate(360deg); } }
+
+.animate-fade-in      { animation: fadeIn .35s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-slide-in     { animation: slideIn .4s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-fade-in-down { animation: fadeInDown .25s ease-out forwards; }
+.animate-spin-slow    { animation: spinSlow 6s linear infinite; }
+
+/* ------------------------------ Scrollbars -------------------------------- */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-thin::-webkit-scrollbar { width: 6px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+.scrollbar-thin { scrollbar-width: thin; }
+
+/* ------------------------------- Iconos ----------------------------------- */
+svg.lucide { stroke-width: 2; }
