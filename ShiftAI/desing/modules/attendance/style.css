@@ -1,0 +1,16 @@
+/* ShiftAI — Gestión de Asistencia (estilos extra mínimos) */
+
+/* Las acciones de fila solo aparecen al hacer hover sobre la fila.
+   El CDN de Tailwind v4 soporta group-hover, pero dejamos un refuerzo
+   para navegadores que no resuelvan el variant sobre <tr>. */
+tr.att-row .row-actions {
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+tr.att-row:hover .row-actions { opacity: 1; }
+
+/* Asegura que el checkbox herede el acento de marca en navegadores
+   que no soportan la utility text-[#6366F1] sobre inputs. */
+input[type="checkbox"].att-check {
+  accent-color: #6366F1;
+}

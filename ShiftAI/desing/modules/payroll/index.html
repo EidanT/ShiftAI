@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nómina y Pagos — ShiftAI Design</title>
+  <!-- Tailwind v4 (runtime browser) + iconos lucide -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="../../shared/shell.css">
+  <link rel="stylesheet" href="style.css">
+  <style type="text/tailwindcss">
+    @import "tailwindcss";
+    @theme {
+      --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+      --font-display: "Space Grotesk", sans-serif;
+    }
+  </style>
+</head>
+<body data-module="payroll" class="bg-[#F8FAFC]">
+  <div id="app-layout">
+    <div id="sidebar-mount"></div>
+    <div id="header-mount"></div>
+    <main id="main" class="flex-1 p-6 relative">
+      <!-- Contenido del módulo (migración de FutureModulesView.tsx → payroll) -->
+      <div id="future-module-mount"></div>
+    </main>
+  </div>
+  <script src="../../shared/data.js"></script>
+  <script src="../../shared/shell.js"></script>
+  <script src="../../shared/future-module.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
