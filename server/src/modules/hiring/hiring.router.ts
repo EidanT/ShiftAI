@@ -1,19 +1,24 @@
 import { Router } from 'express';
-import { SupabaseHiringRepository } from './hiring.repository';
+import { InMemoryHiringRepository } from './hiring.repository';
 import { HiringService } from './hiring.service';
 import { HiringController } from './hiring.controller';
 import { validate } from '../../middlewares/validate';
 import { writeLimiter } from '../../middlewares/rateLimiter';
 import {
-  CreateVacancySchema,
+  CreateApplicationSchema,
   CreateCandidateSchema,
-  UpdateCandidateStatusSchema,
+  CreateInterviewSchema,
+  CreateVacancySchema,
+  HireCandidateSchema,
+  UpdateApplicationStatusSchema,
+  UpdateCandidateSchema,
 } from './hiring.types';
 
 export function createHiringRouter(): Router {
   const router = Router();
 
-  const repository = new SupabaseHiringRepository();
+  // Prepared for Supabase, but intentionally using memory while DB connection is omitted.
+  const repository = new InMemoryHiringRepository();
   const service = new HiringService(repository);
   const controller = new HiringController(service);
 
@@ -28,10 +33,36 @@ export function createHiringRouter(): Router {
     controller.createCandidate,
   );
   router.patch(
-    '/candidates/:id/status',
+    '/candidates/:id',
     writeLimiter,
-    validate(UpdateCandidateStatusSchema),
-    controller.updateCandidateStatus,
+    validate(UpdateCandidateSchema),
+    controller.updateCandidate,
+  );
+
+  router.get('/applications', controller.getApplications);
+  router.post(
+    '/applications',
+    writeLimiter,
+    validate(CreateApplicationSchema),
+    controller.createApplication,
+  );
+  router.patch(
+    '/applications/:id/status',
+    writeLimiter,
+    validate(UpdateApplicationStatusSchema),
+    controller.updateApplicationStatus,
+  );
+  router.post(
+    '/applications/:id/interviews',
+    writeLimiter,
+    validate(CreateInterviewSchema),
+    controller.createInterview,
+  );
+  router.post(
+    '/applications/:id/hire',
+    writeLimiter,
+    validate(HireCandidateSchema),
+    controller.hireCandidate,
   );
 
   return router;
