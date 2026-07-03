@@ -47,10 +47,7 @@ const statuses = ['En evaluacion', 'Aprobado', 'Rechazado', 'Contratado']
 // #Modulo de contratacion (HiringModule), Tiene Index principal y una vista preliminar de lo que sera el modulo 1 
 //funcional, desde el registro de vacantes hasta la seleccion del candidato.
 
-import { useNavigate } from "react-router-dom";
-
 function HiringModule() {
-  const navigate = useNavigate();
   return (
     <main className="app-shell">
       <aside className="sidebar" aria-label="Modulos principales">
@@ -81,7 +78,6 @@ function HiringModule() {
                   <button
                       type="button"
                       className="vacante"
-                      onClick={() => navigate("/register-vacancy")}
                   >
                       Nueva vacante
                   </button>

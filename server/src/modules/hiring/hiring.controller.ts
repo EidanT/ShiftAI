@@ -1,9 +1,13 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { HiringService } from './hiring.service';
 import type {
-  CreateVacancyDto,
+  CreateApplicationDto,
   CreateCandidateDto,
-  UpdateCandidateStatusDto,
+  CreateInterviewDto,
+  CreateVacancyDto,
+  HireCandidateDto,
+  UpdateApplicationStatusDto,
+  UpdateCandidateDto,
 } from './hiring.types';
 
 export class HiringController {
@@ -45,15 +49,69 @@ export class HiringController {
     }
   };
 
-  updateCandidateStatus = async (
+  updateCandidate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await this.service.updateCandidate(
+        Number(req.params.id),
+        req.body as UpdateCandidateDto,
+      );
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  getApplications = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await this.service.getApplications();
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  createApplication = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await this.service.createApplication(req.body as CreateApplicationDto);
+      res.status(201).json(data);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  updateApplicationStatus = async (
     req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const { status } = req.body as UpdateCandidateStatusDto;
-      const data = await this.service.updateCandidateStatus(req.params.id, status);
+      const { status } = req.body as UpdateApplicationStatusDto;
+      const data = await this.service.updateApplicationStatus(Number(req.params.id), status);
       res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  createInterview = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await this.service.createInterview(
+        Number(req.params.id),
+        req.body as CreateInterviewDto,
+      );
+      res.status(201).json(data);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  hireCandidate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await this.service.hireCandidate(
+        Number(req.params.id),
+        req.body as HireCandidateDto,
+      );
+      res.status(201).json(data);
     } catch (err) {
       next(err);
     }
