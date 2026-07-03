@@ -2,13 +2,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { sileo } from 'sileo';
 import {
-  Building2, 
-  Plus, 
-  Search, 
-  RotateCw, 
-  SlidersHorizontal,
-  ChevronRight,
-  Sparkles,
   Briefcase,
   Calendar,
   Edit3,
@@ -60,62 +53,131 @@ interface Candidato {
   fechaRegistro: string;
 }
 
+const estadosCandidato: CandidateStatus[] = ['En evaluacion', 'Aprobado', 'Rechazado', 'Contratado'];
+const resultadosEntrevista: InterviewResult[] = ['Pendiente', 'Aprobado', 'Rechazado', 'Requiere segunda entrevista'];
+
+const seedVacantes: Vacante[] = [
+  {
+    id: 'VAC-101',
+    titulo: 'Analista de Recursos Humanos',
+    departamento: 'Gestion Humana',
+    requisitos: 'Licenciatura en Psicologia, 2 anos de experiencia, manejo de entrevistas.',
+    responsabilidades: 'Publicar vacantes, filtrar candidatos y coordinar entrevistas.',
+    estado: 'Abierta',
+    fechaCreacion: '2026-05-12',
+  },
+  {
+    id: 'VAC-102',
+    titulo: 'Soporte Tecnico Junior',
+    departamento: 'Tecnologia',
+    requisitos: 'Conocimientos basicos de redes, soporte a usuarios y documentacion.',
+    responsabilidades: 'Atender tickets, registrar incidencias y escalar casos tecnicos.',
+    estado: 'En evaluacion',
+    fechaCreacion: '2026-05-20',
+  },
+];
+
+const seedCandidatos: Candidato[] = [
+  {
+    id: 'CAN-001',
+    nombre: 'Laura Mendez',
+    correo: 'laura.mendez@email.com',
+    telefono: '809-555-0101',
+    ubicacion: 'Santo Domingo',
+    profesion: 'Psicologa Organizacional',
+    educacion: 'Licenciatura en Psicologia',
+    experiencia: '3 anos en seleccion de personal',
+    resumenProfesional: 'Especialista en procesos de reclutamiento y entrevistas por competencias.',
+    vacanteId: 'VAC-101',
+    estado: 'En evaluacion',
+    entrevistas: [],
+    fechaRegistro: '2026-06-02',
+  },
+  {
+    id: 'CAN-002',
+    nombre: 'Carlos Rivera',
+    correo: 'carlos.rivera@email.com',
+    telefono: '809-555-0102',
+    ubicacion: 'Santiago',
+    profesion: 'Tecnico en Soporte',
+    educacion: 'Tecnico en Redes y Telecomunicaciones',
+    experiencia: '1 ano en soporte tecnico a usuarios',
+    resumenProfesional: 'Buen manejo de tickets y resolucion de incidencias de primer nivel.',
+    vacanteId: 'VAC-102',
+    estado: 'Aprobado',
+    entrevistas: [
+      {
+        id: 'ENT-001',
+        fecha: '2026-06-10',
+        entrevistador: 'Laura Mendoza',
+        observaciones: 'Buen dominio tecnico, se aprueba para siguiente fase.',
+        resultado: 'Aprobado',
+      },
+    ],
+    fechaRegistro: '2026-06-05',
+  },
+  {
+    id: 'CAN-003',
+    nombre: 'Ana Torres',
+    correo: 'ana.torres@email.com',
+    telefono: '809-555-0103',
+    ubicacion: 'Santo Domingo',
+    profesion: 'Analista de Recursos Humanos',
+    educacion: 'Licenciatura en Administracion de Empresas',
+    experiencia: '4 anos en gestion de talento humano',
+    resumenProfesional: 'Experiencia liderando procesos de contratacion end-to-end.',
+    vacanteId: 'VAC-101',
+    estado: 'Contratado',
+    entrevistas: [
+      {
+        id: 'ENT-002',
+        fecha: '2026-06-08',
+        entrevistador: 'Laura Mendoza',
+        observaciones: 'Seleccionada para contratacion inmediata.',
+        resultado: 'Aprobado',
+      },
+    ],
+    fechaRegistro: '2026-05-28',
+  },
+];
+
+const emptyCandidateForm = {
+  nombre: '',
+  correo: '',
+  telefono: '',
+  ubicacion: '',
+  profesion: '',
+  educacion: '',
+  experiencia: '',
+  resumenProfesional: '',
+  vacanteId: seedVacantes[0]?.id ?? '',
+};
+
+const emptyVacancyForm = {
+  titulo: '',
+  departamento: 'Gestion Humana',
+  requisitos: '',
+  responsabilidades: '',
+  estado: 'Abierta' as VacancyStatus,
+};
+
+function makeId(prefix: string): string {
+  return `${prefix}-${Math.floor(Math.random() * 900) + 100}`;
+}
+
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function loadInitialData(): { vacantes: Vacante[]; candidatos: Candidato[] } {
+  return { vacantes: seedVacantes, candidatos: seedCandidatos };
+}
+
+function latestInterview(candidato: Candidato): Entrevista | undefined {
+  return [...candidato.entrevistas].sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+}
+
 export default function RecruitmentView() {
-  // 1. Core States for Job Openings (Vacantes)
-  const [vacantes, setVacantes] = useState<Vacante[]>([
-    {
-      id: 'VAC-101',
-      titulo: 'Analista de Recursos Humanos',
-      departamento: 'Gestion Humana',
-      requisitos: 'Licenciatura en Psicologia, 2 anos de experiencia, manejo de entrevistas.',
-      responsabilidades: 'Publicar vacantes, filtrar candidatos y coordinar entrevistas.',
-      estado: 'Abierta'
-    },
-    {
-      id: 'VAC-102',
-      titulo: 'Soporte Tecnico Junior',
-      departamento: 'Tecnologia',
-      requisitos: 'Conocimientos basicos de redes, soporte a usuarios y documentacion.',
-      responsabilidades: 'Atender tickets, registrar incidencias y escalar casos tecnicos.',
-      estado: 'En evaluacion'
-    }
-  ]);
-
-  // 2. Core States for Candidates (Candidatos)
-  const [candidatos, setCandidatos] = useState<Candidato[]>([
-    {
-      id: 'CAN-001',
-      nombre: 'Laura Mendez',
-      vacanteId: 'VAC-101', // Analista de Recursos Humanos
-      experiencia: '3 anos',
-      estado: 'En evaluacion',
-      resultadoEntrevista: 'Pendiente'
-    },
-    {
-      id: 'CAN-002',
-      nombre: 'Carlos Rivera',
-      vacanteId: 'VAC-102', // Soporte Tecnico Junior
-      experiencia: '1 ano',
-      estado: 'Aprobado',
-      resultadoEntrevista: 'Entrevista tecnica aprobada'
-    },
-    {
-      id: 'CAN-003',
-      nombre: 'Ana Torres',
-      vacanteId: 'VAC-101', // Analista de Recursos Humanos
-      experiencia: '4 anos',
-      estado: 'Contratado',
-      resultadoEntrevista: 'Seleccionada para contratacion'
-    }
-  ]);
-
-  // 3. Form input states for Candidate Registration
-  const [candNombre, setCandNombre] = useState('');
-  const [candVacanteId, setCandVacanteId] = useState('VAC-101');
-  const [candExperiencia, setCandExperiencia] = useState('');
-  const [candObservaciones, setCandObservaciones] = useState('');
-
-export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps) {
   const [initialData] = useState(loadInitialData);
   const [vacantes, setVacantes] = useState<Vacante[]>(initialData.vacantes);
   const [candidatos, setCandidatos] = useState<Candidato[]>(initialData.candidatos);
@@ -137,20 +199,29 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
   );
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Selected candidate highlights (e.g. for selection helper feedback)
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
+  const totalEntrevistas = candidatos.reduce((acc, c) => acc + c.entrevistas.length, 0);
+  const totalContratados = candidatos.filter((c) => c.estado === 'Contratado').length;
 
-  // Calculated Metrics
-  const totalVacantes = vacantes.length;
-  const totalCandidatos = candidatos.length;
-  // Entrevistas are defined in picture as "2" (let's calculate based on candidates in "En evaluacion" or "Aprobado" with interview observations, or simply state-based)
-  const totalEntrevistas = candidatos.filter(c => c.estado === 'En evaluacion' || c.estado === 'Aprobado').length;
-  const totalContratados = candidatos.filter(c => c.estado === 'Contratado').length;
+  const activeInterviewCandidateId = candidatos.some((c) => c.id === interviewCandidateId)
+    ? interviewCandidateId
+    : (candidatos[0]?.id ?? '');
 
-  // Handle saving a candidate
+  const candidatosFiltrados = candidatos.filter((candidato) => {
+    const matchesEstado = filtroEstado === 'Todos' || candidato.estado === filtroEstado;
+    const term = busqueda.trim().toLowerCase();
+    const matchesBusqueda =
+      term === '' || candidato.nombre.toLowerCase().includes(term) || candidato.profesion.toLowerCase().includes(term);
+    return matchesEstado && matchesBusqueda;
+  });
+
+  const resetCandidateForm = () => {
+    setEditingCandidateId(null);
+    setCandidateForm(emptyCandidateForm);
+  };
+
   const handleGuardarCandidato = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!candNombre.trim()) {
+    if (!candidateForm.nombre.trim()) {
       sileo.error({
         title: 'Nombre requerido',
         description: 'El nombre completo del candidato es obligatorio.',
@@ -164,11 +235,15 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
           candidato.id === editingCandidateId ? { ...candidato, ...candidateForm } : candidato,
         ),
       );
-      onTriggerToast('Candidato actualizado', `Se actualizo la ficha de ${candidateForm.nombre}.`, 'success');
+      sileo.success({
+        title: 'Candidato actualizado',
+        description: `Se actualizo la ficha de ${candidateForm.nombre}.`,
+      });
       resetCandidateForm();
       return;
     }
 
+    const vacante = vacantes.find((v) => v.id === candidateForm.vacanteId);
     const nuevoCandidato: Candidato = {
       id: makeId('CAN'),
       ...candidateForm,
@@ -177,11 +252,13 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
       fechaRegistro: today(),
     };
 
-    setCandidatos(prev => [nuevo, ...prev]);
+    setCandidatos((prev) => [nuevoCandidato, ...prev]);
     sileo.success({
-      title: 'Candidato Registrado',
-      description: `Ficha cargada con éxito para la vacante "${vacName}".`,
+      title: 'Candidato registrado',
+      description: `Ficha cargada con éxito para la vacante "${vacante?.titulo ?? 'seleccionada'}".`,
     });
+    resetCandidateForm();
+  };
 
   const handleEditarCandidato = (candidato: Candidato) => {
     setEditingCandidateId(candidato.id);
@@ -196,43 +273,36 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
       resumenProfesional: candidato.resumenProfesional,
       vacanteId: candidato.vacanteId,
     });
-    onTriggerToast('Ficha cargada', `Ahora puede actualizar la informacion de ${candidato.nombre}.`, 'info');
+    sileo.info({
+      title: 'Ficha cargada',
+      description: `Ahora puede actualizar la información de ${candidato.nombre}.`,
+    });
   };
 
-  // Handle changing candidate recruitment status
-  const handleCambiarEstado = (id: string, nuevoEstado: Candidato['estado']) => {
-    let oldState: string = '';
-    setCandidatos(prev => prev.map(c => {
-      if (c.id === id) {
-        oldState = c.estado;
-        let result = c.resultadoEntrevista;
-        if (nuevoEstado === 'Contratado') {
-          result = 'Seleccionada para contratacion';
-        } else if (nuevoEstado === 'Aprobado') {
-          result = 'Entrevista aprobada';
-        } else if (nuevoEstado === 'Rechazado') {
-          result = 'No califica para la posicion';
-        } else {
-          result = 'Pendiente evaluacion posterior';
-        }
-        return { ...c, estado: nuevoEstado, resultadoEntrevista: result };
-      }
-      return c;
-    }));
+  const handleCambiarEstado = (id: string, nuevoEstado: CandidateStatus) => {
+    const candidato = candidatos.find((c) => c.id === id);
+    if (!candidato) return;
 
-    const cand = candidatos.find(c => c.id === id);
-    if (cand) {
-      sileo.success({
-        title: 'Estatus Actualizado',
-        description: `${cand.nombre} cambió de "${oldState}" a "${nuevoEstado}".`,
-      });
-    }
+    const estadoAnterior = candidato.estado;
+    setCandidatos((prev) => prev.map((c) => (c.id === id ? { ...c, estado: nuevoEstado } : c)));
+    sileo.success({
+      title: 'Estatus actualizado',
+      description: `${candidato.nombre} cambió de "${estadoAnterior}" a "${nuevoEstado}".`,
+    });
   };
 
-  // Handle saving new Vacancy
+  const handleSeleccionarParaContratacion = (candidato: Candidato) => {
+    setSelectedHireId(candidato.id);
+    setCandidatos((prev) => prev.map((c) => (c.id === candidato.id ? { ...c, estado: 'Contratado' } : c)));
+    sileo.success({
+      title: 'Candidato seleccionado para contratación',
+      description: `${candidato.nombre} quedó marcado como contratado.`,
+    });
+  };
+
   const handleGuardarVacante = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vacTitulo.trim()) {
+    if (!vacanteForm.titulo.trim()) {
       sileo.error({
         title: 'Título requerido',
         description: 'Por favor complete el nombre de la posición.',
@@ -240,22 +310,21 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
       return;
     }
 
-    const entrevista: Entrevista = {
-      id: makeId('ENT'),
-      ...interviewForm,
-      observaciones: interviewForm.observaciones || 'Sin observaciones adicionales.',
+    const nuevaVacante: Vacante = {
+      id: makeId('VAC'),
+      ...vacanteForm,
+      requisitos: vacanteForm.requisitos || 'Licenciatura o carrera técnica afín.',
+      responsabilidades: vacanteForm.responsabilidades || 'Tareas operativas y colaboración del puesto.',
+      fechaCreacion: today(),
     };
 
-    setVacantes(prev => [...prev, nuevaVac]);
+    setVacantes((prev) => [...prev, nuevaVacante]);
     sileo.success({
-      title: 'Nueva Vacante Publicada',
-      description: `Se registró la posición "${vacTitulo}" correctamente.`,
+      title: 'Nueva vacante publicada',
+      description: `Se registró la posición "${nuevaVacante.titulo}" correctamente.`,
     });
 
-    // Clear & Hide
-    setVacTitulo('');
-    setVacReqs('');
-    setVacResps('');
+    setVacanteForm(emptyVacancyForm);
     setShowVacanteModal(false);
   };
 
@@ -270,16 +339,31 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
     }, 800);
   };
 
-  // Pre-load form input with candidate to edit/interact
-  const handleSeleccionarCandidato = (c: Candidato) => {
-    setSelectedCandidateId(c.id);
-    setCandNombre(c.nombre);
-    setCandVacanteId(c.vacanteId);
-    setCandExperiencia(c.experiencia);
-    setCandObservaciones(c.resultadoEntrevista !== 'Pendiente' ? c.resultadoEntrevista : '');
-    sileo.info({
-      title: 'Candidato seleccionado',
-      description: `Se cargó la información de ${c.nombre} en el formulario de registro.`,
+  const handleRegistrarEntrevista = (e: React.FormEvent) => {
+    e.preventDefault();
+    const candidato = candidatos.find((c) => c.id === activeInterviewCandidateId);
+    if (!candidato) return;
+
+    const entrevista: Entrevista = {
+      id: makeId('ENT'),
+      ...interviewForm,
+      observaciones: interviewForm.observaciones || 'Sin observaciones adicionales.',
+    };
+
+    setCandidatos((prev) =>
+      prev.map((c) => (c.id === candidato.id ? { ...c, entrevistas: [entrevista, ...c.entrevistas] } : c)),
+    );
+
+    sileo.success({
+      title: 'Entrevista registrada',
+      description: `Se guardó la entrevista de ${candidato.nombre}.`,
+    });
+
+    setInterviewForm({
+      fecha: today(),
+      entrevistador: interviewForm.entrevistador,
+      resultado: 'Pendiente',
+      observaciones: '',
     });
   };
 
