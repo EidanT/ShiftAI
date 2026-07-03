@@ -1,0 +1,32 @@
+/* ============================================================================
+   ShiftAI — Módulo Licencias y Vacaciones
+   Estilos extra del drawer/panel lateral de detalle.
+   Tailwind v4 cubre el resto; aquí solo la transición de apertura/cierre.
+   ========================================================================== */
+
+/* El drawer está fixed a la derecha; se desliza con translateX.
+   Estado cerrado por defecto (clase drawer-closed); abierto (clase drawer-open). */
+#lic-drawer {
+  transition: transform .35s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity .25s ease;
+  will-change: transform, opacity;
+}
+
+#lic-drawer.drawer-closed {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+#lic-drawer.drawer-open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Ajuste responsive: en pantallas pequeñas el drawer ocupa todo el ancho */
+@media (max-width: 640px) {
+  #lic-drawer {
+    width: 100% !important;
+  }
+}

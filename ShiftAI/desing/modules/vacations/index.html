@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Licencias y Vacaciones — ShiftAI Design</title>
+  <!-- Tailwind v4 (runtime browser) + iconos lucide -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="../../shared/shell.css">
+  <link rel="stylesheet" href="style.css">
+  <style type="text/tailwindcss">
+    @import "tailwindcss";
+    @theme {
+      --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+      --font-display: "Space Grotesk", sans-serif;
+    }
+  </style>
+</head>
+<body data-module="vacations" class="bg-[#F8FAFC]">
+  <div id="app-layout">
+    <div id="sidebar-mount"></div>
+    <div id="header-mount"></div>
+    <main id="main" class="flex-1 relative">
+      <!-- Contenedor del módulo (JSX del LicensesView.tsx convertido a HTML) -->
+      <div class="flex bg-[#F8FAFC] h-full min-h-[calc(100vh-4rem)] relative select-none text-left">
+
+        <!-- Sección izquierda scrollable -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6 pb-20 pr-[420px]">
+
+          <!-- Action Header -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 class="text-2xl font-bold text-[#0F172A] tracking-tight">Gestión de Licencias y Vacaciones (En proceso)</h1>
+              <p class="text-sm text-[#45474c] mt-1">Supervisión e historial de permisos especiales, ausencias y períodos aprobados.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <button class="px-3.5 py-2 bg-white border border-[#E2E8F0] text-[#0F172A] rounded-lg hover:bg-slate-50 transition-all font-semibold text-xs flex items-center gap-2 shadow-sm">
+                <i data-lucide="sliders-horizontal" class="w-4 h-4 text-slate-400"></i>
+                <span>Filtros avanzados</span>
+              </button>
+              <button class="px-3.5 py-2 bg-white border border-[#E2E8F0] text-[#0F172A] rounded-lg hover:bg-slate-50 transition-all font-semibold text-xs flex items-center gap-2 shadow-sm">
+                <i data-lucide="download" class="w-4 h-4 text-slate-400"></i>
+                <span>Exportar</span>
+              </button>
+              <button id="btn-nueva-licencia"
+                class="px-4 py-2 bg-[#0F172A] hover:bg-slate-800 text-white rounded-lg hover:scale-105 active:scale-95 shadow-md transition-all font-semibold text-xs flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Nueva Licencia</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Filters Bar -->
+          <div class="bg-white p-4 rounded-xl border border-[#E2E8F0] shadow-sm flex flex-wrap items-end gap-4">
+            <div class="flex-1 min-w-[180px] flex flex-col gap-1">
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Buscar empleado</span>
+              <div class="relative flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus-within:border-[#6366F1] focus-within:bg-white transition-all">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 mr-2 shrink-0"></i>
+                <input id="f-buscar" type="text" placeholder="Nombre o ID..."
+                  class="w-full bg-transparent border-none text-xs text-slate-800 focus:outline-none focus:ring-0 placeholder:text-slate-400">
+              </div>
+            </div>
+
+            <div class="w-44 flex flex-col gap-1">
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Tipo de licencia</span>
+              <div class="relative flex items-center bg-slate-50 border border-slate-200 rounded-lg pr-8 pl-3 py-1.5 focus-within:border-[#6366F1] focus-within:bg-white transition-all">
+                <select id="f-tipo"
+                  class="w-full bg-transparent border-none text-xs text-slate-800 focus:outline-none focus:ring-0 cursor-pointer appearance-none">
+                  <option>Todos los tipos</option>
+                  <option>Médica</option>
+                  <option>Vacaciones</option>
+                  <option>Maternidad/Paternidad</option>
+                  <option>Estudios</option>
+                </select>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-2 pointer-events-none"></i>
+              </div>
+            </div>
+
+            <div class="w-36 flex flex-col gap-1">
+              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Estado</span>
+              <div class="relative flex items-center bg-slate-50 border border-slate-200 rounded-lg pr-8 pl-3 py-1.5 focus-within:border-[#6366F1] focus-within:bg-white transition-all">
+                <select id="f-estado"
+                  class="w-full bg-transparent border-none text-xs text-slate-800 focus:outline-none focus:ring-0 cursor-pointer appearance-none">
+                  <option>Todos</option>
+                  <option>Pendiente</option>
+                  <option>Aprobada</option>
+                  <option>Activa</option>
+                  <option>Finalizada</option>
+                </select>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-2 pointer-events-none"></i>
+              </div>
+            </div>
+
+            <button id="btn-limpiar"
+              class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-xs rounded-lg transition-all">
+              Limpiar filtros
+            </button>
+          </div>
+
+          <!-- KPI Stats Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm hover:border-indigo-100 transition-colors flex flex-col justify-between h-full">
+              <p class="text-[10px] font-bold text-[#8590a6] uppercase tracking-widest mb-1.5 leading-none">Licencias Activas</p>
+              <div class="flex items-baseline gap-2 mt-2">
+                <span class="text-3xl font-extrabold text-[#0F172A] tracking-tight leading-none">42</span>
+                <span class="text-[10px] font-bold text-[#10B981] bg-emerald-50 px-1.5 py-0.5 rounded-full">+5%</span>
+              </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm hover:border-indigo-100 transition-colors flex flex-col justify-between h-full">
+              <p class="text-[10px] font-bold text-[#8590a6] uppercase tracking-widest mb-1.5 leading-none">Solicitudes Pendientes</p>
+              <div class="flex items-baseline gap-2 mt-2">
+                <span id="kpi-pendientes" class="text-3xl font-extrabold text-[#0F172A] tracking-tight leading-none">0</span>
+                <span class="text-[10px] font-bold text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-full">Alerta</span>
+              </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm hover:border-indigo-100 transition-colors flex flex-col justify-between h-full">
+              <p class="text-[10px] font-bold text-[#8590a6] uppercase tracking-widest mb-1.5 leading-none">Licencias Finalizadas</p>
+              <div class="flex items-baseline gap-2 mt-2">
+                <span class="text-3xl font-extrabold text-[#0F172A] tracking-tight leading-none">156</span>
+                <span class="text-[10px] font-bold text-[#10B981] bg-emerald-50 px-1.5 py-0.5 rounded-full">-2%</span>
+              </div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm hover:border-indigo-100 transition-colors flex flex-col justify-between h-full">
+              <p class="text-[10px] font-bold text-[#8590a6] uppercase tracking-widest mb-1.5 leading-none">Días Totales Acumulados</p>
+              <div class="flex items-baseline gap-2 mt-2">
+                <span class="text-3xl font-extrabold text-[#0F172A] tracking-tight leading-none">1,240</span>
+                <span class="text-[10px] text-slate-500 font-semibold ml-1 font-sans">YTD</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla de licencias -->
+          <div class="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col">
+            <div class="overflow-x-auto w-full">
+              <table class="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                  <tr class="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200">
+                    <th class="py-3 px-4">Empleado</th>
+                    <th class="py-3 px-4">Clasificación</th>
+                    <th class="py-3 px-4">Duración</th>
+                    <th class="py-3 px-4">Rango de Fechas</th>
+                    <th class="py-3 px-4">Estatus</th>
+                    <th class="py-3 px-4 text-right pr-6">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="lic-tbody" class="divide-y divide-slate-100 text-xs font-semibold text-slate-600">
+                  <!-- filas generadas desde script.js -->
+                </tbody>
+              </table>
+            </div>
+            <div id="lic-footer" class="px-6 py-4 border-t border-slate-100 flex justify-between bg-slate-50 text-xs font-semibold text-slate-500">
+              <!-- footer generado desde script.js -->
+            </div>
+          </div>
+
+          <!-- Bento Grid Analytics -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Donut: Licencias por Clasificación -->
+            <div class="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm">
+              <h3 class="text-sm font-bold text-[#0F172A] mb-4">Licencias por Clasificación</h3>
+              <div class="flex items-center justify-center p-3 relative h-48">
+                <svg class="w-32 h-32 transform -rotate-90 shrink-0">
+                  <circle cx="64" cy="64" r="48" fill="transparent" stroke="#E2E8F0" strokeWidth="14"></circle>
+                  <circle cx="64" cy="64" r="48" fill="transparent" stroke="#6366F1" strokeWidth="14" strokeDasharray="301" strokeDashoffset="135"></circle>
+                  <circle cx="64" cy="64" r="48" fill="transparent" stroke="#10B981" strokeWidth="14" strokeDasharray="301" strokeDashoffset="225" class="opacity-80"></circle>
+                </svg>
+                <div class="ml-8 space-y-2 flex flex-col text-left">
+                  <span class="flex items-center text-xs font-semibold text-slate-700">
+                    <span class="w-3 h-3 rounded-full bg-[#6366F1] mr-2 block"></span>Médica (45%)
+                  </span>
+                  <span class="flex items-center text-xs font-semibold text-slate-700">
+                    <span class="w-3 h-3 rounded-full bg-[#10B981] mr-2 block"></span>Vacaciones (30%)
+                  </span>
+                  <span class="flex items-center text-xs font-semibold text-slate-700">
+                    <span class="w-3 h-3 rounded-full bg-[#F59E0B] mr-2 block"></span>Maternidad (15%)
+                  </span>
+                  <span class="flex items-center text-xs font-semibold text-slate-700">
+                    <span class="w-3 h-3 rounded-full bg-slate-400 mr-2 block"></span>Estudios (10%)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bar chart: Registro Histórico -->
+            <div class="bg-white p-6 rounded-xl border border-[#E2E8F0] shadow-sm">
+              <h3 class="text-sm font-bold text-[#0F172A] mb-4">Registro Histórico de Licencias (Últimos 6 meses)</h3>
+              <div class="h-44 flex items-end justify-between px-4 pb-2 border-b border-[#E2E8F0]/80 relative z-10">
+                <div class="absolute inset-0 flex flex-col justify-between pointer-events-none pb-2 z-0">
+                  <div class="border-t border-slate-100 w-full h-0"></div>
+                  <div class="border-t border-slate-100 w-full h-0"></div>
+                  <div class="border-t border-slate-100 w-full h-0"></div>
+                </div>
+                <div class="w-10 flex flex-col items-center group relative cursor-pointer z-10">
+                  <div class="w-6 rounded-t-md transition-all duration-300 h-[40%] bg-[#6366F1]/40 hover:bg-[#6366F1]/70"></div>
+                  <span class="text-[10px] font-bold mt-1.5 text-slate-400">May</span>
+                  <span class="absolute opacity-0 group-hover:opacity-100 transition-opacity -top-8 bg-slate-900 text-white rounded text-[10px] font-bold px-1.5 py-0.5 pointer-events-none select-none shadow">12</span>
+                </div>
+                <div class="w-10 flex flex-col items-center group relative cursor-pointer z-10">
+                  <div class="w-6 rounded-t-md transition-all duration-300 h-[60%] bg-[#6366F1]/40 hover:bg-[#6366F1]/70"></div>
+                  <span class="text-[10px] font-bold mt-1.5 text-slate-400">Jun</span>
+                  <span class="absolute opacity-0 group-hover:opacity-100 transition-opacity -top-8 bg-slate-900 text-white rounded text-[10px] font-bold px-1.5 py-0.5 pointer-events-none select-none shadow">18</span>
+                </div>
+                <div class="w-10 flex flex-col items-center group relative cursor-pointer z-10">
+                  <div class="w-6 rounded-t-md transition-all duration-300 h-[35%] bg-[#6366F1]/40 hover:bg-[#6366F1]/70"></div>
+                  <span class="text-[10px] font-bold mt-1.5 text-slate-400">Jul</span>
+                  <span class="absolute opacity-0 group-hover:opacity-100 transition-opacity -top-8 bg-slate-900 text-white rounded text-[10px] font-bold px-1.5 py-0.5 pointer-events-none select-none shadow">10</span>
+                </div>
+                <div class="w-10 flex flex-col items-center group relative cursor-pointer z-10">
+                  <div class="w-6 rounded-t-md transition-all duration-300 h-[80%] bg-[#6366F1]/40 hover:bg-[#6366F1]/70"></div>
+                  <span class="text-[10px] font-bold mt-1.5 text-slate-400">Ago</span>
+                  <span class="absolute opacity-0 group-hover:opacity-100 transition-opacity -top-8 bg-slate-900 text-white rounded text-[10px] font-bold px-1.5 py-0.5 pointer-events-none select-none shadow">24</span>
+                </div>
+                <div class="w-10 flex flex-col items-center group relative cursor-pointer z-10">
+                  <div class="w-6 rounded-t-md transition-all duration-300 h-[50%] bg-[#6366F1]/40 hover:bg-[#6366F1]/70"></div>
+                  <span class="text-[10px] font-bold mt-1.5 text-slate-400">Sep</span>
+                  <span class="absolute opacity-0 group-hover:opacity-100 transition-opacity -top-8 bg-slate-900 text-white rounded text-[10px] font-bold px-1.5 py-0.5 pointer-events-none select-none shadow">15</span>
+                </div>
+                <div class="w-10 flex flex-col items-center group relative cursor-pointer z-10">
+                  <div class="w-6 rounded-t-md transition-all duration-300 h-[90%] bg-[#6366F1] shadow-[0_0_8px_rgba(99,102,241,0.4)]"></div>
+                  <span class="text-[10px] font-bold mt-1.5 text-[#6366F1]">Oct</span>
+                  <span class="absolute opacity-0 group-hover:opacity-100 transition-opacity -top-8 bg-slate-900 text-white rounded text-[10px] font-bold px-1.5 py-0.5 pointer-events-none select-none shadow">28</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Drawer / Panel lateral de detalle (oculto por defecto) -->
+        <aside id="lic-drawer"
+          class="w-[400px] bg-white border-l border-slate-200 shadow-[-4px_0_15px_rgba(0,0,0,0.03)] h-full flex flex-col z-20 fixed right-0 top-16 drawer-closed">
+          <!-- Contenido generado desde script.js -->
+        </aside>
+      </div>
+    </main>
+  </div>
+  <script src="../../shared/data.js"></script>
+  <script src="../../shared/shell.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

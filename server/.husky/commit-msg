@@ -1,0 +1,2 @@
+GIT_DIR=$(git rev-parse --git-dir)
+cd server && npx --no -- commitlint --edit "$GIT_DIR/COMMIT_EDITMSG"
