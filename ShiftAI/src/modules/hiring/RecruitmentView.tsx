@@ -10,17 +10,21 @@ import {
   ChevronRight,
   Sparkles,
   Briefcase,
-  UserCheck2,
-  Users,
-  CheckCircle,
-  FileBadge,
-  UserPlus,
-  Compass,
-  FileText,
-  BadgeAlert,
   Calendar,
-  X
+  Edit3,
+  FileText,
+  Plus,
+  RotateCw,
+  Search,
+  UserCheck2,
+  UserPlus,
+  Users,
+  X,
 } from 'lucide-react';
+
+type VacancyStatus = 'Abierta' | 'En evaluacion' | 'Cerrada';
+type CandidateStatus = 'En evaluacion' | 'Aprobado' | 'Rechazado' | 'Contratado';
+type InterviewResult = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Requiere segunda entrevista';
 
 interface Vacante {
   id: string;
@@ -28,16 +32,32 @@ interface Vacante {
   departamento: string;
   requisitos: string;
   responsabilidades: string;
-  estado: 'Abierta' | 'En evaluacion' | 'Cerrada';
+  estado: VacancyStatus;
+  fechaCreacion: string;
+}
+
+interface Entrevista {
+  id: string;
+  fecha: string;
+  entrevistador: string;
+  observaciones: string;
+  resultado: InterviewResult;
 }
 
 interface Candidato {
   id: string;
   nombre: string;
-  vacanteId: string; // Relación con Vacante
+  correo: string;
+  telefono: string;
+  ubicacion: string;
+  profesion: string;
+  educacion: string;
   experiencia: string;
-  estado: 'En evaluacion' | 'Aprobado' | 'Contratado' | 'Rechazado';
-  resultadoEntrevista: string;
+  resumenProfesional: string;
+  vacanteId: string;
+  estado: CandidateStatus;
+  entrevistas: Entrevista[];
+  fechaRegistro: string;
 }
 
 export default function RecruitmentView() {
@@ -95,15 +115,26 @@ export default function RecruitmentView() {
   const [candExperiencia, setCandExperiencia] = useState('');
   const [candObservaciones, setCandObservaciones] = useState('');
 
-  // 4. Modal state for creating a "Nueva Vacante" / "Registrar Vacante"
+export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps) {
+  const [initialData] = useState(loadInitialData);
+  const [vacantes, setVacantes] = useState<Vacante[]>(initialData.vacantes);
+  const [candidatos, setCandidatos] = useState<Candidato[]>(initialData.candidatos);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState<'Todos' | CandidateStatus>('Todos');
   const [showVacanteModal, setShowVacanteModal] = useState(false);
-  const [vacTitulo, setVacTitulo] = useState('');
-  const [vacDepto, setVacDepto] = useState('Gestion Humana');
-  const [vacReqs, setVacReqs] = useState('');
-  const [vacResps, setVacResps] = useState('');
-  const [vacEstadoForm, setVacEstadoForm] = useState<'Abierta' | 'En evaluacion' | 'Cerrada'>('Abierta');
-
-  // Spinning feedback for "Actualizar Datos"
+  const [vacanteForm, setVacanteForm] = useState(emptyVacancyForm);
+  const [candidateForm, setCandidateForm] = useState(emptyCandidateForm);
+  const [editingCandidateId, setEditingCandidateId] = useState<string | null>(null);
+  const [interviewCandidateId, setInterviewCandidateId] = useState(seedCandidatos[0]?.id ?? '');
+  const [interviewForm, setInterviewForm] = useState({
+    fecha: today(),
+    entrevistador: 'Laura Mendoza',
+    resultado: 'Pendiente' as InterviewResult,
+    observaciones: '',
+  });
+  const [selectedHireId, setSelectedHireId] = useState<string | null>(
+    initialData.candidatos.find((c) => c.estado === 'Contratado')?.id ?? null,
+  );
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Selected candidate highlights (e.g. for selection helper feedback)
@@ -127,16 +158,23 @@ export default function RecruitmentView() {
       return;
     }
 
-    const matchedVacante = vacantes.find(v => v.id === candVacanteId);
-    const vacName = matchedVacante ? matchedVacante.titulo : 'Vacante Desconocida';
+    if (editingCandidateId) {
+      setCandidatos((prev) =>
+        prev.map((candidato) =>
+          candidato.id === editingCandidateId ? { ...candidato, ...candidateForm } : candidato,
+        ),
+      );
+      onTriggerToast('Candidato actualizado', `Se actualizo la ficha de ${candidateForm.nombre}.`, 'success');
+      resetCandidateForm();
+      return;
+    }
 
-    const nuevo: Candidato = {
-      id: `CAN-0${Math.floor(Math.random() * 900) + 100}`,
-      nombre: candNombre,
-      vacanteId: candVacanteId,
-      experiencia: candExperiencia || 'Sin especificar',
+    const nuevoCandidato: Candidato = {
+      id: makeId('CAN'),
+      ...candidateForm,
       estado: 'En evaluacion',
-      resultadoEntrevista: candObservaciones.trim() || 'Pendiente'
+      entrevistas: [],
+      fechaRegistro: today(),
     };
 
     setCandidatos(prev => [nuevo, ...prev]);
@@ -145,10 +183,20 @@ export default function RecruitmentView() {
       description: `Ficha cargada con éxito para la vacante "${vacName}".`,
     });
 
-    // Reset inputs
-    setCandNombre('');
-    setCandExperiencia('');
-    setCandObservaciones('');
+  const handleEditarCandidato = (candidato: Candidato) => {
+    setEditingCandidateId(candidato.id);
+    setCandidateForm({
+      nombre: candidato.nombre,
+      correo: candidato.correo,
+      telefono: candidato.telefono,
+      ubicacion: candidato.ubicacion,
+      profesion: candidato.profesion,
+      educacion: candidato.educacion,
+      experiencia: candidato.experiencia,
+      resumenProfesional: candidato.resumenProfesional,
+      vacanteId: candidato.vacanteId,
+    });
+    onTriggerToast('Ficha cargada', `Ahora puede actualizar la informacion de ${candidato.nombre}.`, 'info');
   };
 
   // Handle changing candidate recruitment status
@@ -192,13 +240,10 @@ export default function RecruitmentView() {
       return;
     }
 
-    const nuevaVac: Vacante = {
-      id: `VAC-${Math.floor(Math.random() * 900) + 100}`,
-      titulo: vacTitulo,
-      departamento: vacDepto,
-      requisitos: vacReqs || 'Licenciatura o carrera técnica afín.',
-      responsabilidades: vacResps || 'Tareas operativas y colaboración del puesto.',
-      estado: vacEstadoForm
+    const entrevista: Entrevista = {
+      id: makeId('ENT'),
+      ...interviewForm,
+      observaciones: interviewForm.observaciones || 'Sin observaciones adicionales.',
     };
 
     setVacantes(prev => [...prev, nuevaVac]);
@@ -214,10 +259,9 @@ export default function RecruitmentView() {
     setShowVacanteModal(false);
   };
 
-  // Refresh trigger action simulation
   const handleActualizarDatos = () => {
     setIsUpdating(true);
-    setTimeout(() => {
+    window.setTimeout(() => {
       setIsUpdating(false);
       sileo.info({
         title: 'Planilla de Selección Sincronizada',
@@ -241,451 +285,385 @@ export default function RecruitmentView() {
 
   return (
     <div className="space-y-6 animate-fade-in text-left">
-      
-      {/* SECTION HEADER IN IMAGE (Reclutamiento y Seleccion de Personal) */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-[26px] font-bold text-[#0F172A] tracking-tight font-display flex items-center gap-2.5">
+          <h1 className="font-display flex items-center gap-2 text-[26px] font-bold tracking-tight text-[#0F172A]">
+            <Briefcase className="h-6 w-6 text-[#113B7A]" />
             Reclutamiento y Seleccion de Personal
           </h1>
-          <p className="text-[13px] text-slate-500 font-medium mt-1">
-            Pantalla principal para registrar vacantes, candidatos, entrevistas y el estado de cada candidatura.
+          <p className="mt-1 text-[13px] font-medium text-slate-500">
+            Flujo funcional para vacantes, candidatos, entrevistas, estados y seleccion para contratacion.
           </p>
         </div>
-        
-        <button 
-          onClick={() => {
-            setShowVacanteModal(true);
-          }}
-          id="btn-nueva-vacante"
-          className="bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-xs px-4.5 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-xs shrink-0 self-start sm:self-center"
+
+        <button
+          type="button"
+          onClick={() => setShowVacanteModal(true)}
+          className="flex items-center gap-2 self-start rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-slate-50 lg:self-center"
         >
-          <Plus className="w-3.5 h-3.5 text-slate-500" />
-          <span>Nueva vacante</span>
+          <Plus className="h-4 w-4 text-slate-500" />
+          Nueva vacante
         </button>
       </div>
 
-      {/* 4 METRIC CARDS BAR FROM IMAGE */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        
-        {/* Vacantes Metric */}
-        <div id="metric-vacantes" className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm hover:shadow-md transition-all">
-          <p className="text-[11px] font-bold text-slate-450 text-slate-500 uppercase tracking-wider mb-1">Vacantes</p>
-          <span className="text-3xl font-extrabold text-[#0F172A] tracking-tight">{totalVacantes}</span>
-          <p className="text-[11px] text-slate-400 font-semibold mt-1.5">Registradas para seleccion</p>
-        </div>
-
-        {/* Candidatos Metric */}
-        <div id="metric-candidatos" className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm hover:shadow-md transition-all">
-          <p className="text-[11px] font-bold text-slate-450 text-slate-500 uppercase tracking-wider mb-1">Candidatos</p>
-          <span className="text-3xl font-extrabold text-[#0F172A] tracking-tight">{totalCandidatos}</span>
-          <p className="text-[11px] text-slate-400 font-semibold mt-1.5">Con informacion personal y profesional</p>
-        </div>
-
-        {/* Entrevistas Metric */}
-        <div id="metric-entrevistas" className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm hover:shadow-md transition-all">
-          <p className="text-[11px] font-bold text-slate-450 text-slate-500 uppercase tracking-wider mb-1">Entrevistas</p>
-          <span className="text-3xl font-extrabold text-[#0F172A] tracking-tight">{totalEntrevistas}</span>
-          <p className="text-[11px] text-slate-400 font-semibold mt-1.5">Con observaciones y resultados</p>
-        </div>
-
-        {/* Contratados Metric */}
-        <div id="metric-contratados" className="bg-white border border-[#E2E8F0] rounded-xl p-5 shadow-sm hover:shadow-md transition-all">
-          <p className="text-[11px] font-bold text-slate-450 text-slate-500 uppercase tracking-wider mb-1">Contratados</p>
-          <span className="text-3xl font-extrabold text-[#0F172A] tracking-tight">{totalContratados}</span>
-          <p className="text-[11px] text-slate-400 font-semibold mt-1.5">Listos para pasar a empleados</p>
-        </div>
-
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          ['Vacantes', vacantes.length, 'Registradas con requisitos y responsabilidades', Briefcase],
+          ['Candidatos', candidatos.length, 'Con informacion personal y profesional', Users],
+          ['Entrevistas', totalEntrevistas, 'Con observaciones y resultados', Calendar],
+          ['Contratados', totalContratados, 'Seleccionados para pasar a empleados', UserCheck2],
+        ].map(([label, value, caption, Icon]) => (
+          <article key={String(label)} className="rounded-lg border border-[#E2E8F0] bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label as string}</p>
+              {React.createElement(Icon as typeof Briefcase, { className: 'h-4 w-4 text-slate-400' })}
+            </div>
+            <strong className="mt-2 block text-3xl font-extrabold tracking-tight text-[#0F172A]">{value as number}</strong>
+            <p className="mt-1.5 text-[11px] font-semibold text-slate-400">{caption as string}</p>
+          </article>
+        ))}
       </div>
 
-      {/* MIDDLE SECTION - 2 COLUMN LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        {/* LEFT COLUMN: VACANTES LABORALES */}
-        <div className="lg:col-span-7 bg-white border border-[#E2E8F0] rounded-xl shadow-sm p-6 space-y-4">
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
+        <section className="space-y-4 rounded-lg border border-[#E2E8F0] bg-white p-6 shadow-sm xl:col-span-7">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
-              <h2 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Vacantes laborales</h2>
-              <p className="text-[11px] text-slate-400 mt-0.5">Requisitos y responsabilidades definidos para cada posicion.</p>
+              <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-800">Vacantes laborales</h2>
+              <p className="mt-0.5 text-[11px] text-slate-400">Cada vacante conserva requisitos y responsabilidades.</p>
             </div>
-            <button 
-              onClick={() => {
-                setVacDepto('Gestion Humana');
-                setShowVacanteModal(true);
-              }}
-              className="px-3.5 py-1.5 bg-[#F1F5F9] hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-lg transition-all"
+            <button
+              type="button"
+              onClick={() => setShowVacanteModal(true)}
+              className="rounded-lg bg-[#F1F5F9] px-3.5 py-1.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-200"
             >
               Registrar
             </button>
           </div>
 
-          {/* Job Postings dynamic list */}
-          <div className="space-y-4 max-h-[464px] overflow-y-auto pr-1">
-            {vacantes.map((vac) => (
-              <div 
-                key={vac.id} 
-                className="border border-slate-200/90 rounded-xl p-4 hover:border-slate-350 bg-slate-50/20 hover:bg-slate-50/50 transition-all text-xs"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="text-left">
-                    <h3 className="text-sm font-bold text-slate-800">{vac.titulo}</h3>
-                    <span className="text-[11px] text-slate-400 font-semibold inline-block mt-0.5">{vac.departamento}</span>
+          <div className="max-h-[440px] space-y-4 overflow-y-auto pr-1">
+            {vacantes.map((vacante) => (
+              <article key={vacante.id} className="rounded-lg border border-slate-200 bg-slate-50/30 p-4 text-xs">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800">{vacante.titulo}</h3>
+                    <span className="mt-0.5 inline-block text-[11px] font-semibold text-slate-400">
+                      {vacante.departamento} - {vacante.id}
+                    </span>
                   </div>
-                  
-                  {/* Styled states based on the image style */}
-                  <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider ${
-                    vac.estado === 'Abierta' 
-                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' 
-                      : vac.estado === 'En evaluacion'
-                      ? 'bg-cyan-50 text-cyan-600 border border-cyan-200'
-                      : 'bg-slate-100 text-slate-400 border border-slate-250'
-                  }`}>
-                    {vac.estado === 'En evaluacion' ? 'En evaluacion' : vac.estado}
+                  <span
+                    className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                      vacante.estado === 'Abierta'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                        : vacante.estado === 'En evaluacion'
+                          ? 'border-cyan-200 bg-cyan-50 text-cyan-600'
+                          : 'border-slate-200 bg-slate-100 text-slate-500'
+                    }`}
+                  >
+                    {vacante.estado}
                   </span>
                 </div>
-
-                <div className="mt-3.5 space-y-2 text-left text-slate-700 border-t border-slate-100 pt-2.5">
-                  <p className="leading-relaxed">
-                    <strong className="text-slate-500 font-bold">Requisitos:</strong> {vac.requisitos}
+                <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 leading-relaxed text-slate-700">
+                  <p>
+                    <strong className="text-slate-500">Requisitos:</strong> {vacante.requisitos}
                   </p>
-                  <p className="leading-relaxed">
-                    <strong className="text-slate-500 font-bold">Responsabilidades:</strong> {vac.responsabilidades}
+                  <p>
+                    <strong className="text-slate-500">Responsabilidades:</strong> {vacante.responsabilidades}
                   </p>
                 </div>
-              </div>
+              </article>
             ))}
-
-            {vacantes.length === 0 && (
-              <div className="text-center py-8 text-slate-450 text-slate-400">
-                <Briefcase className="w-8 h-8 mx-auto mb-1 opacity-40" />
-                No hay vacantes registradas en el sistema.
-              </div>
-            )}
           </div>
-        </div>
+        </section>
 
-        {/* RIGHT COLUMN: REGISTRO DE CANDIDATO FORM */}
-        <div className="lg:col-span-5 bg-white border border-[#E2E8F0] rounded-xl shadow-sm p-6">
-          <div className="border-b border-slate-100 pb-3 mb-5">
-            <h2 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Registro de candidato</h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">Formulario visual preparado para conectar con base de datos.</p>
+        <section className="rounded-lg border border-[#E2E8F0] bg-white p-6 shadow-sm xl:col-span-5">
+          <div className="mb-5 flex items-start justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-800">
+                {editingCandidateId ? 'Actualizar candidato' : 'Registro de candidato'}
+              </h2>
+              <p className="mt-0.5 text-[11px] text-slate-400">Datos personales, profesionales y vacante asociada.</p>
+            </div>
+            {editingCandidateId && (
+              <button type="button" onClick={resetCandidateForm} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100">
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           <form onSubmit={handleGuardarCandidato} className="space-y-4">
-            
-            {/* Nombre completo */}
-            <div className="flex flex-col gap-1.5 text-left">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-0.5">
-                Nombre completo
-              </label>
-              <input 
-                type="text" 
-                placeholder="Ej. Maria Perez"
-                value={candNombre}
-                onChange={(e) => setCandNombre(e.target.value)}
-                className="w-full bg-[#FFFFFF] border border-[#CBD5E1] rounded-lg p-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-slate-400"
-                required
-              />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Nombre completo">
+                <input required value={candidateForm.nombre} onChange={(e) => setCandidateForm((p) => ({ ...p, nombre: e.target.value }))} placeholder="Ej. Maria Perez" className="form-input" />
+              </Field>
+              <Field label="Correo">
+                <input required type="email" value={candidateForm.correo} onChange={(e) => setCandidateForm((p) => ({ ...p, correo: e.target.value }))} placeholder="correo@email.com" className="form-input" />
+              </Field>
+              <Field label="Telefono">
+                <input required value={candidateForm.telefono} onChange={(e) => setCandidateForm((p) => ({ ...p, telefono: e.target.value }))} placeholder="809-555-0000" className="form-input" />
+              </Field>
+              <Field label="Ubicacion">
+                <input value={candidateForm.ubicacion} onChange={(e) => setCandidateForm((p) => ({ ...p, ubicacion: e.target.value }))} placeholder="Ciudad o sector" className="form-input" />
+              </Field>
             </div>
 
-            {/* Vacante Dropdown selector */}
-            <div className="flex flex-col gap-1.5 text-left">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-0.5">
-                Vacante
-              </label>
-              <select
-                value={candVacanteId}
-                onChange={(e) => setCandVacanteId(e.target.value)}
-                className="w-full bg-[#FFFFFF] border border-[#CBD5E1] rounded-lg p-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-slate-400"
-              >
-                <option value="" disabled>Seleccionar vacante</option>
-                {vacantes.map(v => (
-                  <option key={v.id} value={v.id}>{v.titulo}</option>
+            <Field label="Vacante">
+              <select required value={candidateForm.vacanteId} onChange={(e) => setCandidateForm((p) => ({ ...p, vacanteId: e.target.value }))} className="form-input">
+                {vacantes.map((vacante) => (
+                  <option key={vacante.id} value={vacante.id}>
+                    {vacante.titulo}
+                  </option>
                 ))}
               </select>
+            </Field>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Profesion">
+                <input required value={candidateForm.profesion} onChange={(e) => setCandidateForm((p) => ({ ...p, profesion: e.target.value }))} placeholder="Ej. Analista RRHH" className="form-input" />
+              </Field>
+              <Field label="Educacion">
+                <input value={candidateForm.educacion} onChange={(e) => setCandidateForm((p) => ({ ...p, educacion: e.target.value }))} placeholder="Grado o certificacion" className="form-input" />
+              </Field>
             </div>
 
-            {/* Experiencia profesional */}
-            <div className="flex flex-col gap-1.5 text-left">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-0.5">
-                Experiencia profesional
-              </label>
-              <input 
-                type="text" 
-                placeholder="Ej. 2 anos en servicio al cliente"
-                value={candExperiencia}
-                onChange={(e) => setCandExperiencia(e.target.value)}
-                className="w-full bg-[#FFFFFF] border border-[#CBD5E1] rounded-lg p-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#475569]"
-              />
-            </div>
+            <Field label="Experiencia profesional">
+              <textarea required rows={3} value={candidateForm.experiencia} onChange={(e) => setCandidateForm((p) => ({ ...p, experiencia: e.target.value }))} placeholder="Experiencia relevante para la vacante" className="form-input resize-none" />
+            </Field>
 
-            {/* Observaciones de entrevista */}
-            <div className="flex flex-col gap-1.5 text-left">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-0.5">
-                Observaciones de entrevista
-              </label>
-              <textarea 
-                rows={4} 
-                placeholder="Resultado, comentarios y siguientes pasos"
-                value={candObservaciones}
-                onChange={(e) => setCandObservaciones(e.target.value)}
-                className="w-full bg-[#FFFFFF] border border-[#CBD5E1] rounded-lg p-2.5 text-xs font-semibold text-[#334155] focus:outline-none focus:border-[#475569] placeholder:text-slate-400 resize-none"
-              />
-            </div>
+            <Field label="Resumen profesional">
+              <textarea rows={3} value={candidateForm.resumenProfesional} onChange={(e) => setCandidateForm((p) => ({ ...p, resumenProfesional: e.target.value }))} placeholder="Fortalezas, logros y notas de perfil" className="form-input resize-none" />
+            </Field>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full py-3 bg-[#113B7A] hover:bg-[#1E3A8A] text-white rounded-lg text-xs font-bold transition-all hover:shadow-md"
-            >
-              Guardar candidato
+            <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#113B7A] py-3 text-xs font-bold text-white transition hover:bg-[#1E3A8A]">
+              {editingCandidateId ? <Edit3 className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+              {editingCandidateId ? 'Actualizar candidato' : 'Guardar candidato'}
             </button>
+          </form>
+        </section>
+      </div>
 
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <div className="rounded-lg border border-[#E2E8F0] bg-white p-6 shadow-sm xl:col-span-4">
+          <div className="mb-5 border-b border-slate-100 pb-3">
+            <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-800">Entrevistas</h2>
+            <p className="mt-0.5 text-[11px] text-slate-400">Registre fecha, observaciones y resultado.</p>
+          </div>
+
+          <form onSubmit={handleRegistrarEntrevista} className="space-y-4">
+            <Field label="Candidato">
+              <select required value={activeInterviewCandidateId} onChange={(e) => setInterviewCandidateId(e.target.value)} className="form-input">
+                {candidatos.map((candidato) => (
+                  <option key={candidato.id} value={candidato.id}>
+                    {candidato.nombre}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Fecha">
+                <input required type="date" value={interviewForm.fecha} onChange={(e) => setInterviewForm((p) => ({ ...p, fecha: e.target.value }))} className="form-input" />
+              </Field>
+              <Field label="Resultado">
+                <select value={interviewForm.resultado} onChange={(e) => setInterviewForm((p) => ({ ...p, resultado: e.target.value as InterviewResult }))} className="form-input">
+                  {resultadosEntrevista.map((resultado) => (
+                    <option key={resultado}>{resultado}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <Field label="Entrevistador">
+              <input required value={interviewForm.entrevistador} onChange={(e) => setInterviewForm((p) => ({ ...p, entrevistador: e.target.value }))} className="form-input" />
+            </Field>
+            <Field label="Observaciones">
+              <textarea rows={4} value={interviewForm.observaciones} onChange={(e) => setInterviewForm((p) => ({ ...p, observaciones: e.target.value }))} placeholder="Observaciones, hallazgos y siguientes pasos" className="form-input resize-none" />
+            </Field>
+            <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-3 text-xs font-bold text-white transition hover:bg-slate-800">
+              <FileText className="h-4 w-4" />
+              Registrar entrevista
+            </button>
           </form>
         </div>
 
-      </div>
-
-      {/* BOTTOM SECTION: CANDIDATOS REGISTRADOS TABLE */}
-      <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm p-6 flex flex-col">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-5">
-          <div className="text-left">
-            <h2 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Candidatos registrados</h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">Listado para consultar, actualizar y seleccionar candidatos.</p>
+        <div className="rounded-lg border border-[#E2E8F0] bg-white p-6 shadow-sm xl:col-span-8">
+          <div className="mb-5 flex flex-col gap-4 border-b border-slate-100 pb-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-800">Candidatos registrados</h2>
+              <p className="mt-0.5 text-[11px] text-slate-400">Consulta, actualizacion, estado y seleccion final.</p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <label className="relative">
+                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar candidato" className="form-input min-w-[210px] pl-9" />
+              </label>
+              <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value as typeof filtroEstado)} className="form-input min-w-[160px]">
+                <option>Todos</option>
+                {estadosCandidato.map((estado) => (
+                  <option key={estado}>{estado}</option>
+                ))}
+              </select>
+              <button type="button" onClick={handleActualizarDatos} className="flex items-center justify-center gap-2 rounded-lg bg-[#F1F5F9] px-3.5 py-2 text-[11px] font-bold text-slate-700 transition hover:bg-slate-200">
+                <RotateCw className={`h-3.5 w-3.5 text-slate-500 ${isUpdating ? 'animate-spin' : ''}`} />
+                Actualizar
+              </button>
+            </div>
           </div>
-          
-          <button 
-            type="button"
-            onClick={handleActualizarDatos}
-            className="px-3.5 py-1.5 bg-[#F1F5F9] hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1.5"
-          >
-            <RotateCw className={`w-3.5 h-3.5 text-slate-500 ${isUpdating ? 'animate-spin' : ''}`} />
-            <span>Actualizar datos</span>
-          </button>
-        </div>
 
-        {/* Scalable Candidate Status Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[750px]">
-            <thead>
-              <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-450 text-slate-400 uppercase tracking-widest">
-                <th className="py-3 px-4 pl-1">Candidato</th>
-                <th className="py-3 px-4">Vacante</th>
-                <th className="py-3 px-4">Experiencia</th>
-                <th className="py-3 px-4">Estado</th>
-                <th className="py-3 px-4">Resultado Entrevista</th>
-                <th className="py-3 px-4 text-right pr-6">Accion</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-650 text-slate-600">
-              {candidatos.map((c) => {
-                const associatedVac = vacantes.find(v => v.id === c.vacanteId);
-                const vacTitle = associatedVac ? associatedVac.titulo : 'Vacante de selección';
-                
-                return (
-                  <tr 
-                    key={c.id} 
-                    className={`hover:bg-slate-50/50 transition-colors group ${
-                      selectedCandidateId === c.id ? 'bg-[#EEF2F6]/50 border-l-4 border-[#113B7A]' : ''
-                    }`}
-                  >
-                    {/* Name */}
-                    <td className="py-3.5 px-4 pl-1">
-                      <span className="font-bold text-slate-800 text-[13px]">{c.nombre}</span>
-                      <span className="text-[10px] text-slate-400 block mt-0.5 uppercase tracking-wider">{c.id}</span>
-                    </td>
-                    
-                    {/* Vacancy Title */}
-                    <td className="py-3.5 px-4 font-bold text-slate-700">
-                      {vacTitle}
-                    </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-slate-200 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  <th className="px-3 py-3">Candidato</th>
+                  <th className="px-3 py-3">Vacante</th>
+                  <th className="px-3 py-3">Perfil profesional</th>
+                  <th className="px-3 py-3">Estado</th>
+                  <th className="px-3 py-3">Ultima entrevista</th>
+                  <th className="px-3 py-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-600">
+                {candidatosFiltrados.map((candidato) => {
+                  const vacante = vacantes.find((item) => item.id === candidato.vacanteId);
+                  const entrevista = latestInterview(candidato);
 
-                    {/* Years of Experience */}
-                    <td className="py-3.5 px-4 text-slate-500 font-medium">
-                      {c.experiencia}
-                    </td>
+                  return (
+                    <tr key={candidato.id} className={selectedHireId === candidato.id ? 'bg-emerald-50/40' : 'hover:bg-slate-50/60'}>
+                      <td className="px-3 py-4">
+                        <span className="block text-[13px] font-bold text-slate-800">{candidato.nombre}</span>
+                        <span className="mt-1 block text-[10px] uppercase tracking-wider text-slate-400">{candidato.id} - {candidato.telefono}</span>
+                        <span className="mt-1 block text-[11px] text-slate-500">{candidato.correo}</span>
+                      </td>
+                      <td className="px-3 py-4 font-bold text-slate-700">{vacante?.titulo ?? 'Sin vacante'}</td>
+                      <td className="max-w-[230px] px-3 py-4">
+                        <span className="block font-bold text-slate-700">{candidato.profesion}</span>
+                        <span className="mt-1 block truncate font-medium text-slate-500" title={candidato.experiencia}>
+                          {candidato.experiencia}
+                        </span>
+                      </td>
+                      <td className="px-3 py-4">
+                        <select
+                          value={candidato.estado}
+                          onChange={(e) => handleCambiarEstado(candidato.id, e.target.value as CandidateStatus)}
+                          className={`rounded-lg border px-2.5 py-2 text-[11px] font-bold ${
+                            candidato.estado === 'Contratado'
+                              ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                              : candidato.estado === 'Aprobado'
+                                ? 'border-blue-300 bg-blue-50 text-blue-700'
+                                : candidato.estado === 'Rechazado'
+                                  ? 'border-rose-300 bg-rose-50 text-rose-600'
+                                  : 'border-amber-300 bg-amber-50 text-amber-700'
+                          }`}
+                        >
+                          {estadosCandidato.map((estado) => (
+                            <option key={estado}>{estado}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="max-w-[240px] px-3 py-4">
+                        {entrevista ? (
+                          <>
+                            <span className="block font-bold text-slate-700">{entrevista.resultado} - {entrevista.fecha}</span>
+                            <span className="mt-1 block truncate font-medium italic text-slate-500" title={entrevista.observaciones}>
+                              {entrevista.observaciones}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-slate-400">Sin entrevista registrada</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button type="button" onClick={() => handleEditarCandidato(candidato)} className="rounded-lg bg-slate-100 px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-200">
+                            Editar
+                          </button>
+                          <button type="button" onClick={() => setInterviewCandidateId(candidato.id)} className="rounded-lg bg-blue-50 px-3 py-2 text-[11px] font-bold text-[#113B7A] hover:bg-blue-100">
+                            Entrevista
+                          </button>
+                          <button type="button" onClick={() => handleSeleccionarParaContratacion(candidato)} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-emerald-700">
+                            Contratar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
 
-                    {/* Recruitment Stage Dropdown */}
-                    <td className="py-3.5 px-4">
-                      <select
-                        value={c.estado}
-                        onChange={(e) => handleCambiarEstado(c.id, e.target.value as any)}
-                        className={`bg-white border border-[#CBD5E1] rounded-lg p-1.5 pr-6 text-xs font-bold text-slate-700 focus:outline-none text-[11px] select-style cursor-pointer ${
-                          c.estado === 'Contratado' ? 'text-emerald-600 border-emerald-300 font-black bg-emerald-50/30' :
-                          c.estado === 'Aprobado' ? 'text-[#113B7A] border-[#113B7A]/40 bg-indigo-50/20' :
-                          c.estado === 'Rechazado' ? 'text-rose-500 border-rose-300 bg-rose-50/20' :
-                          'text-amber-600 border-amber-300'
-                        }`}
-                      >
-                        <option value="En evaluacion">En evaluacion</option>
-                        <option value="Aprobado">Aprobado</option>
-                        <option value="Contratado">Contratado</option>
-                        <option value="Rechazado">Rechazado</option>
-                      </select>
-                    </td>
-
-                    {/* Interview Feedback text */}
-                    <td className="py-3.5 px-4 text-slate-500 italic max-w-[200px] truncate" title={c.resultadoEntrevista}>
-                      {c.resultadoEntrevista}
-                    </td>
-
-                    {/* Action Select link */}
-                    <td className="py-3.5 px-4 text-right pr-6">
-                      <button 
-                        onClick={() => handleSeleccionarCandidato(c)}
-                        className="text-[#113B7A] hover:text-[#1E3A8A] font-bold text-xs hover:underline decoration-solid"
-                      >
-                        Seleccionar
-                      </button>
+                {candidatosFiltrados.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-10 text-center text-slate-400">
+                      No hay candidatos con los filtros actuales.
                     </td>
                   </tr>
-                );
-              })}
-
-              {candidatos.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-center py-8 text-slate-400">
-                    No hay candidatos postulados actualmente.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </section>
 
-
-
-      {/* MODAL DIALOG IN BACKGROUND TO REGISTER VACANCIES */}
       <AnimatePresence>
         {showVacanteModal && (
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ ease: 'easeInOut', duration: 0.2 }}
-              className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden text-left flex flex-col"
+              className="flex w-full max-w-md flex-col overflow-hidden rounded-lg border border-slate-200 bg-white text-left shadow-2xl"
             >
-              {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-[#F8FAFC]">
-                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Registrar Oferta Laboral</h2>
-                <button 
-                  onClick={() => setShowVacanteModal(false)}
-                  className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  <X className="w-5 h-5" />
+              <div className="flex items-center justify-between border-b border-slate-100 bg-[#F8FAFC] px-6 py-4">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-slate-800">Registrar vacante laboral</h2>
+                <button type="button" onClick={() => setShowVacanteModal(false)} className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
-              {/* Form Body info */}
-              <form onSubmit={handleGuardarVacante} className="p-6 space-y-4">
-                
-                {/* Title */}
-                <div className="flex flex-col gap-1.5 text-left">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Nombre del Puesto</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ej. Líder de Desarrollo Técnico"
-                    value={vacTitulo}
-                    onChange={(e) => setVacTitulo(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700"
-                    required
-                  />
-                </div>
-
-                {/* Depto */}
-                <div className="flex flex-col gap-1.5 text-left">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Departamento o Área</label>
-                  <select
-                    value={vacDepto}
-                    onChange={(e) => setVacDepto(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700"
-                  >
-                    <option value="Gestion Humana">Gestión Humana</option>
-                    <option value="Tecnologia">Tecnología</option>
-                    <option value="Ventas">Ventas</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Finanzas">Finanzas</option>
+              <form onSubmit={handleGuardarVacante} className="space-y-4 p-6">
+                <Field label="Nombre del puesto">
+                  <input required value={vacanteForm.titulo} onChange={(e) => setVacanteForm((p) => ({ ...p, titulo: e.target.value }))} placeholder="Ej. Lider de Desarrollo Tecnico" className="form-input" />
+                </Field>
+                <Field label="Departamento o area">
+                  <select value={vacanteForm.departamento} onChange={(e) => setVacanteForm((p) => ({ ...p, departamento: e.target.value }))} className="form-input">
+                    <option>Gestion Humana</option>
+                    <option>Tecnologia</option>
+                    <option>Ventas</option>
+                    <option>Marketing</option>
+                    <option>Finanzas</option>
                   </select>
-                </div>
-
-                {/* Requisitos */}
-                <div className="flex flex-col gap-1.5 text-left">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Requisitos de la Vacante</label>
-                  <textarea 
-                    rows={2} 
-                    placeholder="Ej. 2 años de experiencia, titulación superior, habilidades..."
-                    value={vacReqs}
-                    onChange={(e) => setVacReqs(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 resize-none font-sans"
-                    required
-                  />
-                </div>
-
-                {/* Responsabilidades */}
-                <div className="flex flex-col gap-1.5 text-left">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Responsabilidades u Obligaciones</label>
-                  <textarea 
-                    rows={2} 
-                    placeholder="Ej. Publicar ofertas, control de nómina, KPIs corporativos..."
-                    value={vacResps}
-                    onChange={(e) => setVacResps(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 resize-none font-sans"
-                    required
-                  />
-                </div>
-
-                {/* Estatus default */}
-                <div className="flex flex-col gap-1.5 text-left">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Estado Inicial</label>
-                  <div className="flex gap-4 mt-1">
-                    <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-650 text-slate-700">
-                      <input 
-                        type="radio" 
-                        name="vacStateRadio" 
-                        checked={vacEstadoForm === 'Abierta'} 
-                        onChange={() => setVacEstadoForm('Abierta')} 
-                        className="text-[#113B7A] focus:ring-[#113B7A]"
-                      />
-                      <span>Abierta</span>
-                    </label>
-                    <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-650 text-slate-700">
-                      <input 
-                        type="radio" 
-                        name="vacStateRadio" 
-                        checked={vacEstadoForm === 'En evaluacion'} 
-                        onChange={() => setVacEstadoForm('En evaluacion')} 
-                        className="text-[#113B7A] focus:ring-[#113B7A]"
-                      />
-                      <span>En evaluacion</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Actions group */}
-                <div className="flex gap-3 pt-4 border-t border-slate-100 font-bold text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setShowVacanteModal(false)}
-                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-center"
-                  >
+                </Field>
+                <Field label="Requisitos">
+                  <textarea required rows={3} value={vacanteForm.requisitos} onChange={(e) => setVacanteForm((p) => ({ ...p, requisitos: e.target.value }))} placeholder="Experiencia, estudios y competencias requeridas" className="form-input resize-none" />
+                </Field>
+                <Field label="Responsabilidades">
+                  <textarea required rows={3} value={vacanteForm.responsabilidades} onChange={(e) => setVacanteForm((p) => ({ ...p, responsabilidades: e.target.value }))} placeholder="Funciones principales del puesto" className="form-input resize-none" />
+                </Field>
+                <Field label="Estado inicial">
+                  <select value={vacanteForm.estado} onChange={(e) => setVacanteForm((p) => ({ ...p, estado: e.target.value as VacancyStatus }))} className="form-input">
+                    <option>Abierta</option>
+                    <option>En evaluacion</option>
+                    <option>Cerrada</option>
+                  </select>
+                </Field>
+                <div className="flex gap-3 border-t border-slate-100 pt-4 text-xs font-bold">
+                  <button type="button" onClick={() => setShowVacanteModal(false)} className="flex-1 rounded-lg bg-slate-100 py-3 text-slate-600 hover:bg-slate-200">
                     Cancelar
                   </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-3 bg-[#113B7A] hover:bg-[#1E3A8A] text-white rounded-xl text-center shadow-md"
-                  >
-                    Publicar Vacante
+                  <button type="submit" className="flex-1 rounded-lg bg-[#113B7A] py-3 text-white shadow-md hover:bg-[#1E3A8A]">
+                    Publicar vacante
                   </button>
                 </div>
-
               </form>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
-
     </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1.5 text-left">
+      <span className="pl-0.5 text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</span>
+      {children}
+    </label>
   );
 }

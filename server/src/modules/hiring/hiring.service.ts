@@ -1,10 +1,17 @@
 import type { IHiringRepository } from './hiring.repository';
 import type {
-  Vacancy,
+  Application,
+  ApplicationStatus,
   Candidate,
-  CreateVacancyDto,
+  CreateApplicationDto,
   CreateCandidateDto,
-  CandidateStatus,
+  CreateInterviewDto,
+  CreateVacancyDto,
+  EmployeeHire,
+  HireCandidateDto,
+  Interview,
+  UpdateCandidateDto,
+  Vacancy,
 } from './hiring.types';
 
 export class HiringService {
@@ -26,7 +33,27 @@ export class HiringService {
     return this.repository.insertCandidate(data);
   }
 
-  async updateCandidateStatus(id: string, status: CandidateStatus): Promise<Candidate> {
-    return this.repository.updateCandidateStatus(id, status);
+  async updateCandidate(id: number, data: UpdateCandidateDto): Promise<Candidate> {
+    return this.repository.updateCandidate(id, data);
+  }
+
+  async getApplications(): Promise<Application[]> {
+    return this.repository.findAllApplications();
+  }
+
+  async createApplication(data: CreateApplicationDto): Promise<Application> {
+    return this.repository.insertApplication(data);
+  }
+
+  async updateApplicationStatus(id: number, status: ApplicationStatus): Promise<Application> {
+    return this.repository.updateApplicationStatus(id, status);
+  }
+
+  async createInterview(applicationId: number, data: CreateInterviewDto): Promise<Interview> {
+    return this.repository.insertInterview(applicationId, data);
+  }
+
+  async hireCandidate(applicationId: number, data: HireCandidateDto): Promise<EmployeeHire> {
+    return this.repository.hireCandidate(applicationId, data);
   }
 }
