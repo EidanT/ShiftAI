@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
+import { sileo } from 'sileo';
+import {
   Building2, 
   Plus, 
   Search, 
@@ -39,11 +40,7 @@ interface Candidato {
   resultadoEntrevista: string;
 }
 
-interface RecruitmentViewProps {
-  onTriggerToast: (text: string, sub?: string, type?: 'success' | 'info' | 'error') => void;
-}
-
-export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps) {
+export default function RecruitmentView() {
   // 1. Core States for Job Openings (Vacantes)
   const [vacantes, setVacantes] = useState<Vacante[]>([
     {
@@ -123,7 +120,10 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
   const handleGuardarCandidato = (e: React.FormEvent) => {
     e.preventDefault();
     if (!candNombre.trim()) {
-      onTriggerToast('Nombre requerido', 'El nombre completo del candidato es obligatorio.', 'error');
+      sileo.error({
+        title: 'Nombre requerido',
+        description: 'El nombre completo del candidato es obligatorio.',
+      });
       return;
     }
 
@@ -140,11 +140,10 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
     };
 
     setCandidatos(prev => [nuevo, ...prev]);
-    onTriggerToast(
-      'Candidato Registrado',
-      `Ficha cargada con éxito para la vacante "${vacName}".`,
-      'success'
-    );
+    sileo.success({
+      title: 'Candidato Registrado',
+      description: `Ficha cargada con éxito para la vacante "${vacName}".`,
+    });
 
     // Reset inputs
     setCandNombre('');
@@ -175,11 +174,10 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
 
     const cand = candidatos.find(c => c.id === id);
     if (cand) {
-      onTriggerToast(
-        'Estatus Actualizado',
-        `${cand.nombre} cambió de "${oldState}" a "${nuevoEstado}".`,
-        'success'
-      );
+      sileo.success({
+        title: 'Estatus Actualizado',
+        description: `${cand.nombre} cambió de "${oldState}" a "${nuevoEstado}".`,
+      });
     }
   };
 
@@ -187,7 +185,10 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
   const handleGuardarVacante = (e: React.FormEvent) => {
     e.preventDefault();
     if (!vacTitulo.trim()) {
-      onTriggerToast('Título requerido', 'Por favor complete el nombre de la posición.', 'error');
+      sileo.error({
+        title: 'Título requerido',
+        description: 'Por favor complete el nombre de la posición.',
+      });
       return;
     }
 
@@ -201,8 +202,11 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
     };
 
     setVacantes(prev => [...prev, nuevaVac]);
-    onTriggerToast('Nueva Vacante Publicada', `Se registró la posición "${vacTitulo}" correctamente.`, 'success');
-    
+    sileo.success({
+      title: 'Nueva Vacante Publicada',
+      description: `Se registró la posición "${vacTitulo}" correctamente.`,
+    });
+
     // Clear & Hide
     setVacTitulo('');
     setVacReqs('');
@@ -215,7 +219,10 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
     setIsUpdating(true);
     setTimeout(() => {
       setIsUpdating(false);
-      onTriggerToast('Planilla de Selección Sincronizada', 'Base de datos de reclutamiento refrescada correctamente.', 'info');
+      sileo.info({
+        title: 'Planilla de Selección Sincronizada',
+        description: 'Base de datos de reclutamiento refrescada correctamente.',
+      });
     }, 800);
   };
 
@@ -226,7 +233,10 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
     setCandVacanteId(c.vacanteId);
     setCandExperiencia(c.experiencia);
     setCandObservaciones(c.resultadoEntrevista !== 'Pendiente' ? c.resultadoEntrevista : '');
-    onTriggerToast('Candidato seleccionado', `Se cargó la información de ${c.nombre} en el formulario de registro.`, 'info');
+    sileo.info({
+      title: 'Candidato seleccionado',
+      description: `Se cargó la información de ${c.nombre} en el formulario de registro.`,
+    });
   };
 
   return (

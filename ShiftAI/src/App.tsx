@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { 
-  CheckCircle, 
-  X, 
-  Trash2, 
-  CalendarDays, 
-  Briefcase, 
-  Clock, 
+import { sileo } from 'sileo';
+import {
+  X,
+  Trash2,
+  CalendarDays,
+  Briefcase,
+  Clock,
   AlertCircle,
   FileBadge,
   UserCheck2,
@@ -16,6 +16,10 @@ import {
 // Shared types and data
 import { ModuloId, Empleado, RegistroAsistencia, VacacionLicencia, SolicitudPendiente, RecienteActividad } from './types';
 import { EMPLEADOS, ASISTENCIAS, LICENCIAS, SOLICITUDES_PENDIENTES, RECIENTES, CAPACITACIONES_CURSOS } from './data';
+
+// Auth
+import { useAuth } from './context/useAuth';
+import LoginView from './modules/auth/LoginView';
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -30,6 +34,8 @@ import HistoryQueriesView from './modules/history/HistoryQueriesView';
 import RecruitmentView from './modules/hiring/RecruitmentView';
 
 export default function App() {
+  const { user, loading } = useAuth();
+
   // Navigation & High-level State routing
   const [moduloActivo, setModuloActivo] = useState<ModuloId>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -41,14 +47,6 @@ export default function App() {
   const [asistencias, setAsistencias] = useState<RegistroAsistencia[]>(ASISTENCIAS);
   const [licencias, setLicencias] = useState<VacacionLicencia[]>(LICENCIAS);
   const [solicitudes, setSolicitudes] = useState<SolicitudPendiente[]>(SOLICITUDES_PENDIENTES);
-  
-  // Interactive Snackbar notification state
-  const [toast, setToast] = useState<{ visible: boolean; text: string; subtext?: string; type: 'success' | 'info' | 'error' }>({
-    visible: false,
-    text: '',
-    subtext: '',
-    type: 'success'
-  });
 
   // Modal display controllers
   const [showManualModal, setShowManualModal] = useState(false);
@@ -69,31 +67,21 @@ export default function App() {
   const [formLeaveDias, setFormLeaveDias] = useState(10);
   const [formLeaveJustif, setFormLeaveJustif] = useState('');
 
-  // Floating notification helper
-  const triggerToast = (text: string, sub?: string, type: 'success' | 'info' | 'error' = 'success') => {
-    setToast({ visible: true, text, subtext: sub, type });
-    setTimeout(() => {
-      setToast(prev => ({ ...prev, visible: false }));
-    }, 4500);
-  };
-
   // ACTIONS: Dashboard Quick Requests Approval
   const handleAprobarSolicitud = (id: string, tipo: string) => {
     setSolicitudes(prev => prev.filter(s => s.id !== id));
-    triggerToast(
-      '¡Solicitud aprobada con éxito!',
-      `Se autorizó el trámite de "${tipo}" e impactará los reportes.`,
-      'success'
-    );
+    sileo.success({
+      title: '¡Solicitud aprobada con éxito!',
+      description: `Se autorizó el trámite de "${tipo}" e impactará los reportes.`,
+    });
   };
 
   const handleRechazarSolicitud = (id: string, tipo: string) => {
     setSolicitudes(prev => prev.filter(s => s.id !== id));
-    triggerToast(
-      'Solicitud desestimada',
-      `La petición de "${tipo}" ha sido rechazada y archivada.`,
-      'info'
-    );
+    sileo.info({
+      title: 'Solicitud desestimada',
+      description: `La petición de "${tipo}" ha sido rechazada y archivada.`,
+    });
   };
 
   // ACTIONS: Leaves Approval / rejection (Side Drawer)
@@ -111,11 +99,10 @@ export default function App() {
       }
       return lic;
     }));
-    triggerToast(
-      'Trámite de Licencia Aprobado',
-      `Se firmó digitalmente el folio del titular ${empNombre}.`,
-      'success'
-    );
+    sileo.success({
+      title: 'Trámite de Licencia Aprobado',
+      description: `Se firmó digitalmente el folio del titular ${empNombre}.`,
+    });
   };
 
   const handleRechazarLicencia = (id: string, empNombre: string) => {
@@ -132,17 +119,19 @@ export default function App() {
       }
       return lic;
     }));
-    triggerToast(
-      'Formulario Rechazado',
-      `La requisición especial de ${empNombre} fue revocada.`,
-      'error'
-    );
+    sileo.error({
+      title: 'Formulario Rechazado',
+      description: `La requisición especial de ${empNombre} fue revocada.`,
+    });
   };
 
   // ACTIONS: Delete attendance log
   const handleEliminarAsistencia = (id: string) => {
     setAsistencias(prev => prev.filter(a => a.id !== id));
-    triggerToast('Registro de asistencia anulado', 'El horario acumulado ya no figura en nómina.', 'info');
+    sileo.info({
+      title: 'Registro de asistencia anulado',
+      description: 'El horario acumulado ya no figura en nómina.',
+    });
   };
 
   // ACTIONS: Add New Employee Trigger
@@ -165,12 +154,18 @@ export default function App() {
     };
 
     if (empleados.some(e => e.id === randomId)) {
-      triggerToast('Colaborador ya contratado', 'El expediente de Esteban ya se encuentra activo.', 'info');
+      sileo.info({
+        title: 'Colaborador ya contratado',
+        description: 'El expediente de Esteban ya se encuentra activo.',
+      });
       return;
     }
 
     setEmpleados(p => [...p, nuevo]);
-    triggerToast('¡Colaborador ingresado!', 'Esteban Paz fue agregado a la plantilla activa.', 'success');
+    sileo.success({
+      title: '¡Colaborador ingresado!',
+      description: 'Esteban Paz fue agregado a la plantilla activa.',
+    });
   };
 
   // ACTIONS: Submit Modal Form (Attendance vs Licencias)
@@ -192,11 +187,10 @@ export default function App() {
       };
 
       setAsistencias(prev => [nuevoReg, ...prev]);
-      triggerToast(
-        'Asistencia Registrada',
-        `Jornada de ${emp.nombre} para el ${formFecha} guardada exitosamente.`,
-        'success'
-      );
+      sileo.success({
+        title: 'Asistencia Registrada',
+        description: `Jornada de ${emp.nombre} para el ${formFecha} guardada exitosamente.`,
+      });
     } else {
       // Create leave license element
       const nuevaLic: VacacionLicencia = {
@@ -225,15 +219,26 @@ export default function App() {
       };
       setSolicitudes(prev => [nuevaSol, ...prev]);
 
-      triggerToast(
-        'Solicitud de Tiempo Especial Creada',
-        `Expediente cargado con folio administrativo pendiente.`,
-        'success'
-      );
+      sileo.success({
+        title: 'Solicitud de Tiempo Especial Creada',
+        description: 'Expediente cargado con folio administrativo pendiente.',
+      });
     }
 
     setShowManualModal(false);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+        <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366F1] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginView />;
+  }
 
   return (
     <div className={`min-h-screen font-sans bg-[#F8FAFC] overflow-hidden ${darkMode ? 'dark' : ''}`}>
@@ -320,7 +325,7 @@ export default function App() {
               )}
 
               {moduloActivo === 'recruitment' && (
-                <RecruitmentView onTriggerToast={triggerToast} />
+                <RecruitmentView />
               )}
 
               {/* Other modules are beautifully styled on FutureModulesView */}
@@ -336,39 +341,6 @@ export default function App() {
           </AnimatePresence>
         </main>
       </div>
-
-      {/* Floating sliding Snackbar alert Notification system */}
-      <AnimatePresence>
-        {toast.visible && (
-          <motion.div
-            initial={{ opacity: 0, x: 50, y: 20 }}
-            animate={{ opacity: 1, x: 0, y: 0 }}
-            exit={{ opacity: 0, x: 55, scale: 0.9 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 25 }}
-            className={`fixed bottom-6 right-6 p-4 rounded-xl shadow-xl flex items-start gap-3.5 border z-50 max-w-sm select-none ${
-              toast.type === 'success' ? 'bg-[#0F172A] text-white border-slate-800' :
-              toast.type === 'error' ? 'bg-rose-900 border-rose-800 text-white' :
-              'bg-slate-900 text-white border-slate-700'
-            }`}
-          >
-            <CheckCircle className={`w-5 h-5 shrink-0 mt-0.5 ${
-              toast.type === 'success' ? 'text-emerald-400' : 'text-rose-400'
-            }`} />
-            
-            <div className="flex-1 text-left">
-              <p className="text-xs font-bold leading-normal">{toast.text}</p>
-              {toast.subtext && <p className="text-[10.5px] opacity-80 mt-1 leading-normal font-semibold">{toast.subtext}</p>}
-            </div>
-
-            <button 
-              onClick={() => setToast(prev => ({ ...prev, visible: false }))}
-              className="p-1 hover:bg-white/10 rounded-md transition-colors"
-            >
-              <X className="w-4 h-4 text-slate-400 hover:text-white" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Manual registry modal popup dialog with form elements */}
       <AnimatePresence>
