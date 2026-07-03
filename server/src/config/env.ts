@@ -6,6 +6,7 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SECRET_KEY: z.string().min(1).optional(),
+  SUPABASE_PUBLISHABLE_KEY: z.string().min(1).optional(),
   SUPABASE_JWKS_URL: z.string().url().optional(),
 });
 
