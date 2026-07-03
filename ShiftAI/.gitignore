@@ -1,6 +1,0 @@
-/.vs/
-/package-lock.json
-/node_modules
-/dist
-.env
-.env.local

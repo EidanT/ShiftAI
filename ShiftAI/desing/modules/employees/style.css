@@ -1,7 +1,0 @@
-/* ShiftAI — Plantilla de Empleados (estilos extra mínimos) */
-/* El render lo provee shared/future-module.js; aquí solo refuerzos puntuales. */
-
-/* Asegura el acento de marca en checkboxes nativos del módulo. */
-input[type="checkbox"] {
-  accent-color: #6366F1;
-}
