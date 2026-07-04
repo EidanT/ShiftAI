@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as authApi from '../api/auth';
 import { readStoredSession, writeStoredSession, clearStoredSession } from '../api/session';
 import type { AuthUser } from '../api/types';
-import { supabase } from '../lib/supabase';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { AuthContext } from './auth-context';
 
 interface Session {
@@ -11,7 +11,20 @@ interface Session {
   accessToken: string;
 }
 
+const skipAuthInDev = import.meta.env.DEV && import.meta.env.VITE_SKIP_AUTH === 'true';
+
+const devSession: Session = {
+  user: {
+    id: 'dev-user',
+    email: 'dev@shiftai.local',
+    role: 'HR Manager',
+  },
+  accessToken: 'dev-access-token',
+};
+
 async function fetchSession(): Promise<Session | null> {
+  if (skipAuthInDev) return devSession;
+
   const stored = readStoredSession();
   if (!stored) return null;
 
@@ -30,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sessionQuery = useQuery({
     queryKey: ['auth', 'session'],
     queryFn: fetchSession,
-    enabled: !!readStoredSession(),
+    enabled: skipAuthInDev || !!readStoredSession(),
     staleTime: Infinity,
     retry: false,
   });
@@ -49,7 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await Promise.allSettled([authApi.logout(), supabase.auth.signOut()]);
+      if (skipAuthInDev) return;
+
+      const tasks: Promise<unknown>[] = [authApi.logout()];
+      if (isSupabaseConfigured) {
+        tasks.push(supabase.auth.signOut());
+      }
+      await Promise.allSettled(tasks);
     },
     onSettled: () => {
       clearStoredSession();
@@ -60,6 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Bridges the session created by the Google OAuth redirect (handled by the
   // browser-side Supabase client) into the same storage the rest of the app reads.
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, oauthSession) => {
@@ -83,10 +104,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [queryClient]);
 
   const login = async (email: string, password: string): Promise<void> => {
+    if (skipAuthInDev) return;
+
     await loginMutation.mutateAsync({ email, password });
   };
 
   const loginWithGoogle = async (): Promise<void> => {
+    if (skipAuthInDev) return;
+
+    if (!isSupabaseConfigured) {
+      throw new Error(
+        'Supabase no esta configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY en ShiftAI/.env.',
+      );
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -101,9 +132,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        user: sessionQuery.data?.user ?? null,
-        accessToken: sessionQuery.data?.accessToken ?? null,
-        loading: sessionQuery.isLoading,
+        user: skipAuthInDev ? devSession.user : (sessionQuery.data?.user ?? null),
+        accessToken: skipAuthInDev ? devSession.accessToken : (sessionQuery.data?.accessToken ?? null),
+        loading: skipAuthInDev ? false : sessionQuery.isLoading,
         error: loginMutation.error?.message ?? null,
         login,
         loginWithGoogle,
