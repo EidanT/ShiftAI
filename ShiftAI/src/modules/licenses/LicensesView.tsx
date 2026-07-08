@@ -20,6 +20,8 @@ import {
   Activity
 } from 'lucide-react';
 import { VacacionLicencia, Empleado } from '../../types';
+import { AnimatePresence, motion } from 'motion/react';
+import LicenseForm from './form/LicenseForm';
 
 interface LicensesViewProps {
   licencias: VacacionLicencia[];
@@ -27,7 +29,14 @@ interface LicensesViewProps {
   busqueda: string;
   onAprobarLicencia: (id: string, empNombre: string) => void;
   onRechazarLicencia: (id: string, empNombre: string) => void;
-  onToggleManualModal: () => void;
+  onSubmitManualLicense: (data: {
+    empleadoId: string;
+    tipo: 'Médica' | 'Vacaciones' | 'Maternidad/Paternidad' | 'Estudios' | 'Permiso Personal';
+    fechaInicio: string;
+    fechaFin: string;
+    duracionDias: number;
+    motivo_descripcion: string;
+  }) => void;
 }
 
 export default function LicensesView({ 
@@ -36,8 +45,9 @@ export default function LicensesView({
   busqueda,
   onAprobarLicencia,
   onRechazarLicencia,
-  onToggleManualModal
+  onSubmitManualLicense
 }: LicensesViewProps) {
+  const [showManualModal, setShowManualModal] = useState(false);
   // Navigation & Detail panel trigger states
   const [selectedLicenciaId, setSelectedLicenciaId] = useState<string>(licencias[0]?.id || '');
   const [buscarNombreId, setBuscarNombreId] = useState('');
@@ -90,7 +100,7 @@ export default function LicensesView({
               <span>Exportar</span>
             </button>
             <button 
-              onClick={onToggleManualModal}
+              onClick={() => setShowManualModal(true)}
               className="px-4 py-2 bg-[#0F172A] hover:bg-slate-800 text-white rounded-lg hover:scale-105 active:scale-95 shadow-md transition-all font-semibold text-xs flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -540,6 +550,41 @@ export default function LicensesView({
           </div>
         )}
       </aside>
+
+      {/* Manual registry modal popup dialog */}
+      <AnimatePresence>
+        {showManualModal && (
+          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ ease: 'easeInOut', duration: 0.2 }}
+              className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-left flex flex-col"
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-[#F8FAFC]">
+                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Registro de Licencia o Vacación</h2>
+                <button 
+                  onClick={() => setShowManualModal(false)}
+                  className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <LicenseForm
+                empleados={empleados}
+                onSubmit={(data) => {
+                  onSubmitManualLicense(data);
+                  setShowManualModal(false);
+                }}
+                onCancel={() => setShowManualModal(false)}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

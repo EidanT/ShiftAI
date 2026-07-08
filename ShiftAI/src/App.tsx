@@ -33,6 +33,8 @@ import LicensesView from './modules/licenses/LicensesView';
 import HistoryQueriesView from './modules/history/HistoryQueriesView';
 import RecruitmentView from './modules/hiring/RecruitmentView';
 
+
+
 export default function App() {
   const { user, loading } = useAuth();
 
@@ -48,24 +50,9 @@ export default function App() {
   const [licencias, setLicencias] = useState<VacacionLicencia[]>(LICENCIAS);
   const [solicitudes, setSolicitudes] = useState<SolicitudPendiente[]>(SOLICITUDES_PENDIENTES);
 
-  // Modal display controllers
-  const [showManualModal, setShowManualModal] = useState(false);
-  const [modalType, setModalType] = useState<'attendance' | 'leave'>('attendance');
 
-  // New registry form states
-  const [formEmpId, setFormEmpId] = useState('EMP-2048');
-  // Attendance Subform
-  const [formFecha, setFormFecha] = useState('2023-10-24');
-  const [formEntrada, setFormEntrada] = useState('09:00 AM');
-  const [formSalida, setFormSalida] = useState('06:00 PM');
-  const [formHoras, setFormHoras] = useState(8);
-  const [formAsistenciaEstado, setFormAsistenciaEstado] = useState<'Presente' | 'Tardanza' | 'Ausente'>('Presente');
-  // Leave Subform
-  const [formLeaveTipo, setFormLeaveTipo] = useState<'Médica' | 'Vacaciones' | 'Maternidad/Paternidad' | 'Estudios' | 'Permiso Personal'>('Vacaciones');
-  const [formLeaveInicio, setFormLeaveInicio] = useState('2023-11-01');
-  const [formLeaveFin, setFormLeaveFin] = useState('2023-11-10');
-  const [formLeaveDias, setFormLeaveDias] = useState(10);
-  const [formLeaveJustif, setFormLeaveJustif] = useState('');
+
+  // Form states are managed locally in their respective component forms
 
   // ACTIONS: Dashboard Quick Requests Approval
   const handleAprobarSolicitud = (id: string, tipo: string) => {
@@ -169,63 +156,75 @@ export default function App() {
   };
 
   // ACTIONS: Submit Modal Form (Attendance vs Licencias)
-  const handleFormRegistrySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const emp = empleados.find(x => x.id === formEmpId);
+  const handleAttendanceSubmit = (data: {
+    empleadoId: string;
+    fecha: string;
+    entrada: string;
+    salida: string;
+    horas: number;
+    estado: 'Presente' | 'Tardanza' | 'Ausente';
+  }) => {
+    const emp = empleados.find(x => x.id === data.empleadoId);
     if (!emp) return;
 
-    if (modalType === 'attendance') {
-      // Create attendance element
-      const nuevoReg: RegistroAsistencia = {
-        id: `AST-M${Math.floor(Math.random() * 900) + 100}`,
-        empleadoId: emp.id,
-        fecha: formFecha,
-        entrada: formEntrada,
-        salida: formSalida,
-        horas: Number(formHoras),
-        estado: formAsistenciaEstado
-      };
+    const nuevoReg: RegistroAsistencia = {
+      id: `AST-M${Math.floor(Math.random() * 900) + 100}`,
+      empleadoId: emp.id,
+      fecha: data.fecha,
+      entrada: data.entrada,
+      salida: data.salida,
+      horas: data.horas,
+      estado: data.estado
+    };
 
-      setAsistencias(prev => [nuevoReg, ...prev]);
-      sileo.success({
-        title: 'Asistencia Registrada',
-        description: `Jornada de ${emp.nombre} para el ${formFecha} guardada exitosamente.`,
-      });
-    } else {
-      // Create leave license element
-      const nuevaLic: VacacionLicencia = {
-        id: `LIC-${Math.floor(Math.random() * 900) + 100}`,
-        empleadoId: emp.id,
-        tipo: formLeaveTipo,
-        fechaInicio: formLeaveInicio,
-        fechaFin: formLeaveFin,
-        duracionDias: Number(formLeaveDias),
-        estado: 'Pendiente',
-        motivo_descripcion: formLeaveJustif || 'Carga manual de tiempos autorizada por administrador de personal.',
-        historialEventos: [
-          { evento: 'Solicitud Creada Manual', usuario: 'Laura Mendoza', fechaHora: 'Hoy, Hace un momento' }
-        ]
-      };
+    setAsistencias(prev => [nuevoReg, ...prev]);
+    sileo.success({
+      title: 'Asistencia Registrada',
+      description: `Jornada de ${emp.nombre} para el ${data.fecha} guardada exitosamente.`,
+    });
+  };
 
-      setLicencias(prev => [nuevaLic, ...prev]);
-      // Also inject into dashboard pending requests to inspect workflows!
-      const nuevaSol: SolicitudPendiente = {
-        id: `REQ-${Math.floor(Math.random() * 900) + 100}`,
-        empleadoId: emp.id,
-        tipoSolicitud: formLeaveTipo,
-        fechas: `${formLeaveInicio} al ${formLeaveFin}`,
-        dias: Number(formLeaveDias),
-        estado: 'Pendiente RRHH'
-      };
-      setSolicitudes(prev => [nuevaSol, ...prev]);
+  const handleLicenseSubmit = (data: {
+    empleadoId: string;
+    tipo: 'Médica' | 'Vacaciones' | 'Maternidad/Paternidad' | 'Estudios' | 'Permiso Personal';
+    fechaInicio: string;
+    fechaFin: string;
+    duracionDias: number;
+    motivo_descripcion: string;
+  }) => {
+    const emp = empleados.find(x => x.id === data.empleadoId);
+    if (!emp) return;
 
-      sileo.success({
-        title: 'Solicitud de Tiempo Especial Creada',
-        description: 'Expediente cargado con folio administrativo pendiente.',
-      });
-    }
+    const nuevaLic: VacacionLicencia = {
+      id: `LIC-${Math.floor(Math.random() * 900) + 100}`,
+      empleadoId: emp.id,
+      tipo: data.tipo,
+      fechaInicio: data.fechaInicio,
+      fechaFin: data.fechaFin,
+      duracionDias: data.duracionDias,
+      estado: 'Pendiente',
+      motivo_descripcion: data.motivo_descripcion || 'Carga manual de tiempos autorizada por administrador de personal.',
+      historialEventos: [
+        { evento: 'Solicitud Creada Manual', usuario: 'Laura Mendoza', fechaHora: 'Hoy, Hace un momento' }
+      ]
+    };
 
-    setShowManualModal(false);
+    setLicencias(prev => [nuevaLic, ...prev]);
+
+    const nuevaSol: SolicitudPendiente = {
+      id: `REQ-${Math.floor(Math.random() * 900) + 100}`,
+      empleadoId: emp.id,
+      tipoSolicitud: data.tipo,
+      fechas: `${data.fechaInicio} al ${data.fechaFin}`,
+      dias: data.duracionDias,
+      estado: 'Pendiente RRHH'
+    };
+    setSolicitudes(prev => [nuevaSol, ...prev]);
+
+    sileo.success({
+      title: 'Solicitud de Tiempo Especial Creada',
+      description: 'Expediente cargado con folio administrativo pendiente.',
+    });
   };
 
   if (loading) {
@@ -281,10 +280,6 @@ export default function App() {
                   solicitudes={solicitudes}
                   onAprobarSolicitud={handleAprobarSolicitud}
                   onRechazarSolicitud={handleRechazarSolicitud}
-                  onToggleManualModal={() => {
-                    setModalType('leave');
-                    setShowManualModal(true);
-                  }}
                 />
               )}
 
@@ -294,10 +289,7 @@ export default function App() {
                   empleados={empleados}
                   busqueda={busquedaGlobal}
                   onEliminarRegistro={handleEliminarAsistencia}
-                  onToggleManualModal={() => {
-                    setModalType('attendance');
-                    setShowManualModal(true);
-                  }}
+                  onSubmitManualAttendance={handleAttendanceSubmit}
                 />
               )}
 
@@ -308,10 +300,7 @@ export default function App() {
                   busqueda={busquedaGlobal}
                   onAprobarLicencia={handleAprobarLicencia}
                   onRechazarLicencia={handleRechazarLicencia}
-                  onToggleManualModal={() => {
-                    setModalType('leave');
-                    setShowManualModal(true);
-                  }}
+                  onSubmitManualLicense={handleLicenseSubmit}
                 />
               )}
 
@@ -342,223 +331,7 @@ export default function App() {
         </main>
       </div>
 
-      {/* Manual registry modal popup dialog with form elements */}
-      <AnimatePresence>
-        {showManualModal && (
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ ease: 'easeInOut', duration: 0.2 }}
-              className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-left flex flex-col"
-            >
-              {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-[#F8FAFC]">
-                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Registro Administrativo Especial</h2>
-                <button 
-                  onClick={() => setShowManualModal(false)}
-                  className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
 
-              {/* Selector Tabs (Asistencia vs Licencias) */}
-              <div className="flex border-b border-slate-100 bg-slate-50">
-                <button
-                  type="button"
-                  onClick={() => setModalType('attendance')}
-                  className={`flex-1 py-3 text-xs font-bold border-b-2 text-center transition-all ${
-                    modalType === 'attendance'
-                      ? 'border-[#6366F1] text-[#6366F1] bg-white font-black'
-                      : 'border-transparent text-slate-550 text-slate-500 hover:bg-slate-100'
-                  }`}
-                >
-                  Entrada de Asistencia
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModalType('leave')}
-                  className={`flex-1 py-3 text-xs font-bold border-b-2 text-center transition-all ${
-                    modalType === 'leave'
-                      ? 'border-[#6366F1] text-[#6366F1] bg-white font-black'
-                      : 'border-transparent text-slate-550 text-slate-500 hover:bg-slate-100'
-                  }`}
-                >
-                  Licencia o Vacación
-                </button>
-              </div>
-
-              {/* Form Content body */}
-              <form onSubmit={handleFormRegistrySubmit} className="p-6 space-y-4">
-                {/* Employee Selector row */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Colaborador Titular</label>
-                  <select
-                    value={formEmpId}
-                    onChange={(e) => setFormEmpId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700 focus:outline-none"
-                    required
-                  >
-                    {empleados.map(e => (
-                      <option key={e.id} value={e.id}>{e.nombre} ({e.id})</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Subform: ASISTENCIA */}
-                {modalType === 'attendance' ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Fecha</label>
-                        <input 
-                          type="date" 
-                          value={formFecha} 
-                          onChange={(e) => setFormFecha(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700"
-                          required
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Estatus del Registro</label>
-                        <select
-                          value={formAsistenciaEstado}
-                          onChange={(e) => setFormAsistenciaEstado(e.target.value as any)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700"
-                        >
-                          <option value="Presente">Presente</option>
-                          <option value="Tardanza">Tardanza</option>
-                          <option value="Ausente">Ausente</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Hora Entrada</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g. 09:00 AM"
-                          value={formEntrada} 
-                          onChange={(e) => setFormEntrada(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 text-center"
-                          required
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Hora Salida</label>
-                        <input 
-                          type="text" 
-                          placeholder="e.g. 06:05 PM"
-                          value={formSalida} 
-                          onChange={(e) => setFormSalida(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 text-center"
-                          required
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Horas Totales</label>
-                        <input 
-                          type="number" 
-                          step="0.1"
-                          value={formHoras} 
-                          onChange={(e) => setFormHoras(Number(e.target.value))}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 text-center"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  // Subform: VACATION LEAVE
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Tipo de Solicitud</label>
-                        <select
-                          value={formLeaveTipo}
-                          onChange={(e) => setFormLeaveTipo(e.target.value as any)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700"
-                        >
-                          <option value="Médica">Médica</option>
-                          <option value="Vacaciones">Vacaciones</option>
-                          <option value="Maternidad/Paternidad">Maternidad/Paternidad</option>
-                          <option value="Estudios">Estudios</option>
-                          <option value="Permiso Personal">Permiso Personal</option>
-                        </select>
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Duración (Dias)</label>
-                        <input 
-                          type="number" 
-                          value={formLeaveDias} 
-                          onChange={(e) => setFormLeaveDias(Number(e.target.value))}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Fecha de Inicio</label>
-                        <input 
-                          type="date" 
-                          value={formLeaveInicio} 
-                          onChange={(e) => setFormLeaveInicio(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700"
-                          required
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <label className="text-[10px] font-bold text-slate-450 text-slate-400 uppercase tracking-widest pl-1">Fecha de Término</label>
-                        <input 
-                          type="date" 
-                          value={formLeaveFin} 
-                          onChange={(e) => setFormLeaveFin(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Justificación o Exposición de Motivos</label>
-                      <textarea
-                        rows={3}
-                        placeholder="Describa el motivo de la licencia..."
-                        value={formLeaveJustif}
-                        onChange={(e) => setFormLeaveJustif(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700 placeholder:text-slate-400"
-                        maxLength={250}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Form Footer Action triggers */}
-                <div className="flex gap-3 pt-4 border-t border-slate-100 select-none font-bold text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setShowManualModal(false)}
-                    className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-center"
-                  >
-                    Descartar
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 py-3.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl text-center shadow-md hover:scale-[1.02] active:scale-95 transition-all"
-                  >
-                    Aplicar Registro
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
