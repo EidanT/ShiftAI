@@ -1,30 +1,18 @@
 # Modulo 1: Reclutamiento y Seleccion de Personal
 
-Este modulo contiene la primera pantalla del sistema ShiftAI para gestionar el
-flujo inicial de reclutamiento. Por ahora es una vista de frontend con datos de
-prueba y sin conexion a base de datos.
+Este modulo ya consume el backend real de Hiring y persiste sus operaciones en
+Supabase.
 
-## Alcance actual
+## Alcance activo
 
-- Registro visual de vacantes laborales.
-- Espacio para requisitos y responsabilidades por vacante.
-- Formulario visual para registrar candidatos.
-- Listado de candidatos registrados.
-- Campo para actualizar el estado de la candidatura:
-  `En evaluacion`, `Aprobado`, `Rechazado`, `Contratado`.
-- Espacio para observaciones y resultados de entrevistas.
-- Accion visual para seleccionar candidato para contratacion.
+- Registro de vacantes con requisitos y responsabilidades.
+- Alta y edicion de candidatos.
+- Creacion de postulaciones por vacante.
+- Registro de entrevistas.
+- Cambio de estado de postulacion.
+- Contratacion persistida en la tabla `empleado`.
 
-## Pendiente para backend/base de datos
+## Configuracion
 
-- Crear servicios o API dentro de `src/api`.
-- Reemplazar los arreglos estaticos en `HiringModule.tsx`.
-- Agregar validaciones de formulario.
-- Guardar entrevistas, observaciones y cambios de estado.
-- Conectar la accion de contratacion con el modulo de empleados cuando exista.
-
-## Nota para el siguiente modulo
-
-Crear una carpeta nueva dentro de `src/modules` y mantener sus componentes,
-datos de prueba y comentarios separados para evitar modificar este modulo sin
-necesidad.
+- El frontend usa `VITE_API_BASE_URL` si esta definida.
+- Si no existe, apunta por defecto a `http://localhost:3000/api/v1`.

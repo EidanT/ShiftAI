@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { InMemoryHiringRepository } from './hiring.repository';
+import { SupabaseHiringRepository } from './hiring.repository';
 import { HiringService } from './hiring.service';
 import { HiringController } from './hiring.controller';
 import { validate } from '../../middlewares/validate';
@@ -17,8 +17,7 @@ import {
 export function createHiringRouter(): Router {
   const router = Router();
 
-  // Prepared for Supabase, but intentionally using memory while DB connection is omitted.
-  const repository = new InMemoryHiringRepository();
+  const repository = new SupabaseHiringRepository();
   const service = new HiringService(repository);
   const controller = new HiringController(service);
 
