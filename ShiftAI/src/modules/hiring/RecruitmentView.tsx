@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { sileo } from 'sileo';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Briefcase,
   Calendar,
@@ -14,358 +13,515 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import {
+  type Application,
+  type ApplicationStatus,
+  type Candidate,
+  type CreateApplicationDto,
+  type CreateCandidateDto,
+  type CreateInterviewDto,
+  type CreateVacancyDto,
+  type Interview,
+  type InterviewResult,
+  type Vacancy,
+  type VacancyStatus,
+  createApplication,
+  createCandidate,
+  createInterview,
+  createVacancy,
+  getApplications,
+  getCandidates,
+  getVacancies,
+  hireCandidate,
+  updateApplicationStatus,
+  updateCandidate,
+} from './hiringApi';
 
-type VacancyStatus = 'Abierta' | 'En evaluacion' | 'Cerrada';
-type CandidateStatus = 'En evaluacion' | 'Aprobado' | 'Rechazado' | 'Contratado';
-type InterviewResult = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Requiere segunda entrevista';
-
-interface Vacante {
-  id: string;
-  titulo: string;
-  departamento: string;
-  requisitos: string;
-  responsabilidades: string;
-  estado: VacancyStatus;
-  fechaCreacion: string;
+interface RecruitmentViewProps {
+  onTriggerToast: (text: string, sub?: string, type?: 'success' | 'info' | 'error') => void;
 }
 
-interface Entrevista {
-  id: string;
-  fecha: string;
-  entrevistador: string;
-  observaciones: string;
-  resultado: InterviewResult;
+interface VacancyFormState {
+  title: string;
+  description: string;
+  department_id: string;
+  status: VacancyStatus;
+  requirements: string;
+  responsibilities: string;
 }
 
-interface Candidato {
-  id: string;
-  nombre: string;
-  correo: string;
-  telefono: string;
-  ubicacion: string;
-  profesion: string;
-  educacion: string;
-  experiencia: string;
-  resumenProfesional: string;
-  vacanteId: string;
-  estado: CandidateStatus;
-  entrevistas: Entrevista[];
-  fechaRegistro: string;
+interface CandidateFormState {
+  first_name: string;
+  last_name: string;
+  national_id: string;
+  email: string;
+  phone: string;
+  address: string;
+  birth_date: string;
+  academic_level: string;
+  work_experience: string;
+  vacancy_id: string;
 }
 
-const estadosCandidato: CandidateStatus[] = ['En evaluacion', 'Aprobado', 'Rechazado', 'Contratado'];
-const resultadosEntrevista: InterviewResult[] = ['Pendiente', 'Aprobado', 'Rechazado', 'Requiere segunda entrevista'];
-
-const seedVacantes: Vacante[] = [
-  {
-    id: 'VAC-101',
-    titulo: 'Analista de Recursos Humanos',
-    departamento: 'Gestion Humana',
-    requisitos: 'Licenciatura en Psicologia, 2 anos de experiencia, manejo de entrevistas.',
-    responsabilidades: 'Publicar vacantes, filtrar candidatos y coordinar entrevistas.',
-    estado: 'Abierta',
-    fechaCreacion: '2026-05-12',
-  },
-  {
-    id: 'VAC-102',
-    titulo: 'Soporte Tecnico Junior',
-    departamento: 'Tecnologia',
-    requisitos: 'Conocimientos basicos de redes, soporte a usuarios y documentacion.',
-    responsabilidades: 'Atender tickets, registrar incidencias y escalar casos tecnicos.',
-    estado: 'En evaluacion',
-    fechaCreacion: '2026-05-20',
-  },
+const applicationStatuses: ApplicationStatus[] = ['En evaluacion', 'Aprobado', 'Rechazado', 'Contratado'];
+const interviewResults: InterviewResult[] = [
+  'Pendiente',
+  'Aprobado',
+  'Rechazado',
+  'Requiere segunda entrevista',
 ];
 
-const seedCandidatos: Candidato[] = [
-  {
-    id: 'CAN-001',
-    nombre: 'Laura Mendez',
-    correo: 'laura.mendez@email.com',
-    telefono: '809-555-0101',
-    ubicacion: 'Santo Domingo',
-    profesion: 'Psicologa Organizacional',
-    educacion: 'Licenciatura en Psicologia',
-    experiencia: '3 anos en seleccion de personal',
-    resumenProfesional: 'Especialista en procesos de reclutamiento y entrevistas por competencias.',
-    vacanteId: 'VAC-101',
-    estado: 'En evaluacion',
-    entrevistas: [],
-    fechaRegistro: '2026-06-02',
-  },
-  {
-    id: 'CAN-002',
-    nombre: 'Carlos Rivera',
-    correo: 'carlos.rivera@email.com',
-    telefono: '809-555-0102',
-    ubicacion: 'Santiago',
-    profesion: 'Tecnico en Soporte',
-    educacion: 'Tecnico en Redes y Telecomunicaciones',
-    experiencia: '1 ano en soporte tecnico a usuarios',
-    resumenProfesional: 'Buen manejo de tickets y resolucion de incidencias de primer nivel.',
-    vacanteId: 'VAC-102',
-    estado: 'Aprobado',
-    entrevistas: [
-      {
-        id: 'ENT-001',
-        fecha: '2026-06-10',
-        entrevistador: 'Laura Mendoza',
-        observaciones: 'Buen dominio tecnico, se aprueba para siguiente fase.',
-        resultado: 'Aprobado',
-      },
-    ],
-    fechaRegistro: '2026-06-05',
-  },
-  {
-    id: 'CAN-003',
-    nombre: 'Ana Torres',
-    correo: 'ana.torres@email.com',
-    telefono: '809-555-0103',
-    ubicacion: 'Santo Domingo',
-    profesion: 'Analista de Recursos Humanos',
-    educacion: 'Licenciatura en Administracion de Empresas',
-    experiencia: '4 anos en gestion de talento humano',
-    resumenProfesional: 'Experiencia liderando procesos de contratacion end-to-end.',
-    vacanteId: 'VAC-101',
-    estado: 'Contratado',
-    entrevistas: [
-      {
-        id: 'ENT-002',
-        fecha: '2026-06-08',
-        entrevistador: 'Laura Mendoza',
-        observaciones: 'Seleccionada para contratacion inmediata.',
-        resultado: 'Aprobado',
-      },
-    ],
-    fechaRegistro: '2026-05-28',
-  },
-];
+const today = () => new Date().toISOString().slice(0, 10);
 
-const emptyCandidateForm = {
-  nombre: '',
-  correo: '',
-  telefono: '',
-  ubicacion: '',
-  profesion: '',
-  educacion: '',
-  experiencia: '',
-  resumenProfesional: '',
-  vacanteId: seedVacantes[0]?.id ?? '',
+const emptyVacancyForm: VacancyFormState = {
+  title: '',
+  description: '',
+  department_id: '',
+  status: 'Abierta',
+  requirements: '',
+  responsibilities: '',
 };
 
-const emptyVacancyForm = {
-  titulo: '',
-  departamento: 'Gestion Humana',
-  requisitos: '',
-  responsabilidades: '',
-  estado: 'Abierta' as VacancyStatus,
+const emptyCandidateForm: CandidateFormState = {
+  first_name: '',
+  last_name: '',
+  national_id: '',
+  email: '',
+  phone: '',
+  address: '',
+  birth_date: '',
+  academic_level: '',
+  work_experience: '',
+  vacancy_id: '',
 };
 
-function makeId(prefix: string): string {
-  return `${prefix}-${Math.floor(Math.random() * 900) + 100}`;
-}
+const normalizeId = (value: string): number | null => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+const splitEntries = (value: string): string[] =>
+  value
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 
-function loadInitialData(): { vacantes: Vacante[]; candidatos: Candidato[] } {
-  return { vacantes: seedVacantes, candidatos: seedCandidatos };
-}
+const joinDescriptions = (items: Array<{ description: string }>): string =>
+  items.map((item) => item.description).join(' ');
 
-function latestInterview(candidato: Candidato): Entrevista | undefined {
-  return [...candidato.entrevistas].sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
-}
+const getCandidateName = (candidate: Candidate): string =>
+  `${candidate.first_name} ${candidate.last_name}`.trim();
 
-export default function RecruitmentView() {
-  const [initialData] = useState(loadInitialData);
-  const [vacantes, setVacantes] = useState<Vacante[]>(initialData.vacantes);
-  const [candidatos, setCandidatos] = useState<Candidato[]>(initialData.candidatos);
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState<'Todos' | CandidateStatus>('Todos');
-  const [showVacanteModal, setShowVacanteModal] = useState(false);
-  const [vacanteForm, setVacanteForm] = useState(emptyVacancyForm);
-  const [candidateForm, setCandidateForm] = useState(emptyCandidateForm);
-  const [editingCandidateId, setEditingCandidateId] = useState<string | null>(null);
-  const [interviewCandidateId, setInterviewCandidateId] = useState(seedCandidatos[0]?.id ?? '');
-  const [interviewForm, setInterviewForm] = useState({
-    fecha: today(),
-    entrevistador: 'Laura Mendoza',
-    resultado: 'Pendiente' as InterviewResult,
-    observaciones: '',
+const getCandidateSearchText = (candidate: Candidate, application?: Application): string =>
+  [
+    candidate.first_name,
+    candidate.last_name,
+    candidate.national_id,
+    candidate.email,
+    candidate.phone,
+    candidate.address,
+    candidate.academic_level,
+    candidate.work_experience,
+    application?.vacancy?.title ?? '',
+    application?.status ?? '',
+  ]
+    .join(' ')
+    .toLowerCase();
+
+const getLatestInterview = (application?: Application): Interview | undefined => {
+  const interviews = [...(application?.interviews ?? [])];
+  interviews.sort((a, b) => {
+    const byDate = new Date(b.interview_date).getTime() - new Date(a.interview_date).getTime();
+    if (byDate !== 0) return byDate;
+    return b.id - a.id;
   });
-  const [selectedHireId, setSelectedHireId] = useState<string | null>(
-    initialData.candidatos.find((c) => c.estado === 'Contratado')?.id ?? null,
+
+  return interviews[0];
+};
+
+const getVacancyLabel = (vacancy?: Vacancy): string =>
+  vacancy ? `Departamento ${vacancy.department_id ?? 'sin asignar'}` : 'Sin vacante';
+
+export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps) {
+  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [showVacancyModal, setShowVacancyModal] = useState(false);
+  const [vacancyForm, setVacancyForm] = useState<VacancyFormState>(emptyVacancyForm);
+  const [candidateForm, setCandidateForm] = useState<CandidateFormState>(emptyCandidateForm);
+  const [editingCandidateId, setEditingCandidateId] = useState<number | null>(null);
+  const [interviewCandidateId, setInterviewCandidateId] = useState<number | null>(null);
+  const [interviewForm, setInterviewForm] = useState<CreateInterviewDto>({
+    interview_date: today(),
+    interviewer: 'Laura Mendoza',
+    observations: '',
+    result: 'Pendiente',
+  });
+  const [candidateSearchQuery, setCandidateSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'Todos' | ApplicationStatus>('Todos');
+
+  const [savingVacancy, setSavingVacancy] = useState(false);
+  const [savingCandidate, setSavingCandidate] = useState(false);
+  const [savingInterview, setSavingInterview] = useState(false);
+  const [pendingHireId, setPendingHireId] = useState<number | null>(null);
+
+  const loadData = async (silent = false): Promise<boolean> => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
+    try {
+      setError(null);
+      const [nextVacancies, nextCandidates, nextApplications] = await Promise.all([
+        getVacancies(),
+        getCandidates(),
+        getApplications(),
+      ]);
+
+      setVacancies(nextVacancies);
+      setCandidates(nextCandidates);
+      setApplications(nextApplications);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No fue posible cargar el modulo de reclutamiento.';
+      setError(message);
+      onTriggerToast('No se pudo cargar el modulo', message, 'error');
+      return false;
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+
+    return true;
+  };
+
+  useEffect(() => {
+    void loadData();
+  }, []);
+
+  useEffect(() => {
+    setCandidateForm((current) => {
+      if (current.vacancy_id || vacancies.length === 0) return current;
+      return { ...current, vacancy_id: String(vacancies[0].id) };
+    });
+  }, [vacancies]);
+
+  useEffect(() => {
+    setInterviewCandidateId((current) => {
+      if (current && candidates.some((candidate) => candidate.id === current)) return current;
+      return candidates[0]?.id ?? null;
+    });
+  }, [candidates]);
+
+  const applicationByCandidateId = useMemo(() => {
+    const map = new Map<number, Application>();
+    const sortedApplications = [...applications].sort((a, b) => {
+      const byDate = new Date(b.application_date).getTime() - new Date(a.application_date).getTime();
+      if (byDate !== 0) return byDate;
+      return b.id - a.id;
+    });
+
+    for (const application of sortedApplications) {
+      if (!map.has(application.candidate_id)) {
+        map.set(application.candidate_id, application);
+      }
+    }
+
+    return map;
+  }, [applications]);
+
+  const candidateRows = useMemo(
+    () =>
+      candidates
+        .map((candidate) => ({
+          candidate,
+          application: applicationByCandidateId.get(candidate.id),
+        }))
+        .sort((left, right) => {
+          const leftDate = left.application ? new Date(left.application.application_date).getTime() : 0;
+          const rightDate = right.application ? new Date(right.application.application_date).getTime() : 0;
+          if (leftDate !== rightDate) return rightDate - leftDate;
+          return right.candidate.id - left.candidate.id;
+        }),
+    [applicationByCandidateId, candidates],
   );
-  const [isUpdating, setIsUpdating] = useState(false);
 
-  const totalEntrevistas = candidatos.reduce((acc, c) => acc + c.entrevistas.length, 0);
-  const totalContratados = candidatos.filter((c) => c.estado === 'Contratado').length;
+  const interviewCandidate = useMemo(
+    () => candidateRows.find((row) => row.candidate.id === interviewCandidateId) ?? null,
+    [candidateRows, interviewCandidateId],
+  );
 
-  const activeInterviewCandidateId = candidatos.some((c) => c.id === interviewCandidateId)
-    ? interviewCandidateId
-    : (candidatos[0]?.id ?? '');
+  const filteredCandidateRows = useMemo(() => {
+    const search = candidateSearchQuery.toLowerCase();
 
-  const candidatosFiltrados = candidatos.filter((candidato) => {
-    const matchesEstado = filtroEstado === 'Todos' || candidato.estado === filtroEstado;
-    const term = busqueda.trim().toLowerCase();
-    const matchesBusqueda =
-      term === '' || candidato.nombre.toLowerCase().includes(term) || candidato.profesion.toLowerCase().includes(term);
-    return matchesEstado && matchesBusqueda;
-  });
+    return candidateRows.filter((row) => {
+      const text = getCandidateSearchText(row.candidate, row.application);
+      const status = row.application?.status ?? 'En evaluacion';
+      const matchesSearch = text.includes(search);
+      const matchesStatus = filterStatus === 'Todos' || status === filterStatus;
+      return matchesSearch && matchesStatus;
+    });
+  }, [candidateRows, candidateSearchQuery, filterStatus]);
+
+  const totalInterviews = applications.reduce((total, application) => total + (application.interviews?.length ?? 0), 0);
+  const totalHired = applications.filter((application) => application.status === 'Contratado').length;
+  const selectedContractCandidateId = pendingHireId ?? candidateRows.find((row) => row.application?.status === 'Contratado')?.candidate.id ?? null;
+
+  const refreshData = async () => loadData(true);
 
   const resetCandidateForm = () => {
-    setEditingCandidateId(null);
-    setCandidateForm(emptyCandidateForm);
-  };
-
-  const handleGuardarCandidato = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!candidateForm.nombre.trim()) {
-      sileo.error({
-        title: 'Nombre requerido',
-        description: 'El nombre completo del candidato es obligatorio.',
-      });
-      return;
-    }
-
-    if (editingCandidateId) {
-      setCandidatos((prev) =>
-        prev.map((candidato) =>
-          candidato.id === editingCandidateId ? { ...candidato, ...candidateForm } : candidato,
-        ),
-      );
-      sileo.success({
-        title: 'Candidato actualizado',
-        description: `Se actualizo la ficha de ${candidateForm.nombre}.`,
-      });
-      resetCandidateForm();
-      return;
-    }
-
-    const vacante = vacantes.find((v) => v.id === candidateForm.vacanteId);
-    const nuevoCandidato: Candidato = {
-      id: makeId('CAN'),
-      ...candidateForm,
-      estado: 'En evaluacion',
-      entrevistas: [],
-      fechaRegistro: today(),
-    };
-
-    setCandidatos((prev) => [nuevoCandidato, ...prev]);
-    sileo.success({
-      title: 'Candidato registrado',
-      description: `Ficha cargada con éxito para la vacante "${vacante?.titulo ?? 'seleccionada'}".`,
-    });
-    resetCandidateForm();
-  };
-
-  const handleEditarCandidato = (candidato: Candidato) => {
-    setEditingCandidateId(candidato.id);
     setCandidateForm({
-      nombre: candidato.nombre,
-      correo: candidato.correo,
-      telefono: candidato.telefono,
-      ubicacion: candidato.ubicacion,
-      profesion: candidato.profesion,
-      educacion: candidato.educacion,
-      experiencia: candidato.experiencia,
-      resumenProfesional: candidato.resumenProfesional,
-      vacanteId: candidato.vacanteId,
+      ...emptyCandidateForm,
+      vacancy_id: vacancies[0] ? String(vacancies[0].id) : '',
     });
-    sileo.info({
-      title: 'Ficha cargada',
-      description: `Ahora puede actualizar la información de ${candidato.nombre}.`,
-    });
+    setEditingCandidateId(null);
   };
 
-  const handleCambiarEstado = (id: string, nuevoEstado: CandidateStatus) => {
-    const candidato = candidatos.find((c) => c.id === id);
-    if (!candidato) return;
+  const handleGuardarVacante = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSavingVacancy(true);
 
-    const estadoAnterior = candidato.estado;
-    setCandidatos((prev) => prev.map((c) => (c.id === id ? { ...c, estado: nuevoEstado } : c)));
-    sileo.success({
-      title: 'Estatus actualizado',
-      description: `${candidato.nombre} cambió de "${estadoAnterior}" a "${nuevoEstado}".`,
-    });
+    try {
+      const requirementItems = splitEntries(vacancyForm.requirements).map((description) => ({
+        description,
+        type: 'Requisito' as const,
+      }));
+      const responsibilityItems = splitEntries(vacancyForm.responsibilities).map((description) => ({
+        description,
+        type: 'Responsabilidad' as const,
+      }));
+      const departmentId = normalizeId(vacancyForm.department_id);
+
+      const payload: CreateVacancyDto = {
+        title: vacancyForm.title.trim(),
+        description: vacancyForm.description.trim(),
+        department_id: departmentId,
+        publication_date: today(),
+        status: vacancyForm.status,
+        requirements: [...requirementItems, ...responsibilityItems],
+      };
+
+      if (payload.requirements.length === 0) {
+        onTriggerToast('Faltan requisitos', 'Agregue al menos un requisito o responsabilidad para publicar la vacante.', 'error');
+        return;
+      }
+
+      const createdVacancy = await createVacancy(payload);
+      setVacancyForm(emptyVacancyForm);
+      setShowVacancyModal(false);
+      onTriggerToast('Vacante registrada', `Se publico "${createdVacancy.title}" correctamente.`, 'success');
+      await refreshData();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No fue posible guardar la vacante.';
+      onTriggerToast('No se pudo guardar la vacante', message, 'error');
+    } finally {
+      setSavingVacancy(false);
+    }
   };
 
-  const handleSeleccionarParaContratacion = (candidato: Candidato) => {
-    setSelectedHireId(candidato.id);
-    setCandidatos((prev) => prev.map((c) => (c.id === candidato.id ? { ...c, estado: 'Contratado' } : c)));
-    sileo.success({
-      title: 'Candidato seleccionado para contratación',
-      description: `${candidato.nombre} quedó marcado como contratado.`,
-    });
-  };
+  const handleGuardarCandidato = async (event: React.FormEvent) => {
+    event.preventDefault();
 
-  const handleGuardarVacante = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!vacanteForm.titulo.trim()) {
-      sileo.error({
-        title: 'Título requerido',
-        description: 'Por favor complete el nombre de la posición.',
-      });
+    const vacancyId = normalizeId(candidateForm.vacancy_id);
+    if (!vacancyId) {
+      onTriggerToast('Vacante requerida', 'Seleccione una vacante antes de guardar el candidato.', 'error');
       return;
     }
 
-    const nuevaVacante: Vacante = {
-      id: makeId('VAC'),
-      ...vacanteForm,
-      requisitos: vacanteForm.requisitos || 'Licenciatura o carrera técnica afín.',
-      responsabilidades: vacanteForm.responsabilidades || 'Tareas operativas y colaboración del puesto.',
-      fechaCreacion: today(),
+    const payload: CreateCandidateDto = {
+      first_name: candidateForm.first_name.trim(),
+      last_name: candidateForm.last_name.trim(),
+      national_id: candidateForm.national_id.trim(),
+      email: candidateForm.email.trim(),
+      phone: candidateForm.phone.trim(),
+      address: candidateForm.address.trim(),
+      birth_date: candidateForm.birth_date || null,
+      academic_level: candidateForm.academic_level.trim(),
+      work_experience: candidateForm.work_experience.trim(),
     };
 
-    setVacantes((prev) => [...prev, nuevaVacante]);
-    sileo.success({
-      title: 'Nueva vacante publicada',
-      description: `Se registró la posición "${nuevaVacante.titulo}" correctamente.`,
-    });
+    setSavingCandidate(true);
 
-    setVacanteForm(emptyVacancyForm);
-    setShowVacanteModal(false);
+    try {
+      if (editingCandidateId !== null) {
+        await updateCandidate(editingCandidateId, payload);
+
+        const currentApplication = applicationByCandidateId.get(editingCandidateId);
+        const applicationExists = applications.some(
+          (application) =>
+            application.candidate_id === editingCandidateId && application.vacancy_id === vacancyId,
+        );
+
+        if (currentApplication && currentApplication.vacancy_id !== vacancyId && !applicationExists) {
+          await createApplication({
+            candidate_id: editingCandidateId,
+            vacancy_id: vacancyId,
+            status: currentApplication.status,
+          });
+        }
+
+        onTriggerToast('Candidato actualizado', `${payload.first_name} fue actualizado correctamente.`, 'success');
+      } else {
+        const createdCandidate = await createCandidate(payload);
+        await createApplication({
+          candidate_id: createdCandidate.id,
+          vacancy_id: vacancyId,
+          status: 'En evaluacion',
+        });
+        onTriggerToast(
+          'Candidato registrado',
+          `${createdCandidate.first_name} ${createdCandidate.last_name} fue agregado a la vacante seleccionada.`,
+          'success',
+        );
+      }
+
+      resetCandidateForm();
+      await refreshData();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No fue posible guardar el candidato.';
+      onTriggerToast('No se pudo guardar el candidato', message, 'error');
+    } finally {
+      setSavingCandidate(false);
+    }
   };
 
-  const handleActualizarDatos = () => {
-    setIsUpdating(true);
-    window.setTimeout(() => {
-      setIsUpdating(false);
-      sileo.info({
-        title: 'Planilla de Selección Sincronizada',
-        description: 'Base de datos de reclutamiento refrescada correctamente.',
+  const handleEditarCandidato = (candidate: Candidate) => {
+    const application = applicationByCandidateId.get(candidate.id);
+    setEditingCandidateId(candidate.id);
+    setCandidateForm({
+      first_name: candidate.first_name,
+      last_name: candidate.last_name,
+      national_id: candidate.national_id,
+      email: candidate.email,
+      phone: candidate.phone,
+      address: candidate.address,
+      birth_date: candidate.birth_date ?? '',
+      academic_level: candidate.academic_level,
+      work_experience: candidate.work_experience,
+      vacancy_id: String(application?.vacancy_id ?? vacancies[0]?.id ?? ''),
+    });
+    onTriggerToast('Ficha cargada', `Ahora puede actualizar la informacion de ${getCandidateName(candidate)}.`, 'info');
+  };
+
+  const handleCambiarEstado = async (candidateId: number, status: ApplicationStatus) => {
+    const application = applicationByCandidateId.get(candidateId);
+    if (!application) {
+      onTriggerToast('Postulacion no encontrada', 'Ese candidato aun no tiene una postulacion registrada.', 'error');
+      return;
+    }
+
+    try {
+      if (status === 'Contratado') {
+        setPendingHireId(candidateId);
+        await hireCandidate(application.id, {
+          hire_date: today(),
+          status: 'Activo',
+        });
+        const candidate = application.candidate ?? candidates.find((item) => item.id === candidateId);
+        if (!candidate) {
+          throw new Error('No se pudo resolver el candidato seleccionado.');
+        }
+
+        onTriggerToast('Candidato contratado', `${getCandidateName(candidate)} paso a la plantilla activa.`, 'success');
+      } else {
+        await updateApplicationStatus(application.id, status);
+        onTriggerToast('Estado actualizado', `La candidatura cambio a "${status}".`, 'success');
+      }
+
+      await refreshData();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No fue posible actualizar el estado.';
+      onTriggerToast('No se pudo actualizar el estado', message, 'error');
+    }
+  };
+
+  const handleRegistrarEntrevista = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!interviewCandidate) {
+      onTriggerToast('Candidato requerido', 'Seleccione un candidato con postulacion para registrar la entrevista.', 'error');
+      return;
+    }
+
+    if (!interviewCandidate.application) {
+      onTriggerToast('Postulacion requerida', 'Primero debe existir una postulacion para registrar la entrevista.', 'error');
+      return;
+    }
+
+    setSavingInterview(true);
+
+    try {
+      await createInterview(interviewCandidate.application.id, {
+        interview_date: interviewForm.interview_date,
+        interviewer: interviewForm.interviewer.trim(),
+        observations: interviewForm.observations.trim() || 'Sin observaciones adicionales.',
+        result: interviewForm.result,
       });
-    }, 800);
+
+      setInterviewForm({
+        interview_date: today(),
+        interviewer: interviewForm.interviewer,
+        observations: '',
+        result: 'Pendiente',
+      });
+      onTriggerToast(
+        'Entrevista registrada',
+        `Se guardaron las observaciones de ${getCandidateName(interviewCandidate.candidate)}.`,
+        'success',
+      );
+      await refreshData();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No fue posible registrar la entrevista.';
+      onTriggerToast('No se pudo registrar la entrevista', message, 'error');
+    } finally {
+      setSavingInterview(false);
+    }
   };
 
-  const handleRegistrarEntrevista = (e: React.FormEvent) => {
-    e.preventDefault();
-    const candidato = candidatos.find((c) => c.id === activeInterviewCandidateId);
-    if (!candidato) return;
+  const handleSeleccionarParaContratacion = async (candidate: Candidate) => {
+    const application = applicationByCandidateId.get(candidate.id);
+    if (!application) {
+      onTriggerToast('Postulacion no encontrada', 'Ese candidato no tiene una postulacion asociada.', 'error');
+      return;
+    }
 
-    const entrevista: Entrevista = {
-      id: makeId('ENT'),
-      ...interviewForm,
-      observaciones: interviewForm.observaciones || 'Sin observaciones adicionales.',
-    };
+    try {
+      setPendingHireId(candidate.id);
+      await hireCandidate(application.id, {
+        hire_date: today(),
+        status: 'Activo',
+      });
+      onTriggerToast('Candidato contratado', `${getCandidateName(candidate)} quedo registrado como empleado.`, 'success');
+      await refreshData();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No fue posible contratar al candidato.';
+      onTriggerToast('No se pudo contratar al candidato', message, 'error');
+    }
+  };
 
-    setCandidatos((prev) =>
-      prev.map((c) => (c.id === candidato.id ? { ...c, entrevistas: [entrevista, ...c.entrevistas] } : c)),
+  const handleActualizarDatos = async () => {
+    const success = await refreshData();
+    if (success) {
+      onTriggerToast('Datos actualizados', 'La informacion del modulo fue refrescada desde Supabase.', 'info');
+    }
+  };
+
+  const vacancySelectOptions = vacancies.length > 0 ? vacancies : [];
+
+  if (loading) {
+    return (
+      <div className="space-y-6 text-left">
+        <div className="rounded-lg border border-[#E2E8F0] bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold text-slate-500">Cargando modulo de reclutamiento...</p>
+        </div>
+      </div>
     );
-
-    sileo.success({
-      title: 'Entrevista registrada',
-      description: `Se guardó la entrevista de ${candidato.nombre}.`,
-    });
-
-    setInterviewForm({
-      fecha: today(),
-      entrevistador: interviewForm.entrevistador,
-      resultado: 'Pendiente',
-      observaciones: '',
-    });
-  };
+  }
 
   return (
     <div className="space-y-6 animate-fade-in text-left">
@@ -382,7 +538,7 @@ export default function RecruitmentView() {
 
         <button
           type="button"
-          onClick={() => setShowVacanteModal(true)}
+          onClick={() => setShowVacancyModal(true)}
           className="flex items-center gap-2 self-start rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-800 shadow-sm transition hover:bg-slate-50 lg:self-center"
         >
           <Plus className="h-4 w-4 text-slate-500" />
@@ -390,22 +546,34 @@ export default function RecruitmentView() {
         </button>
       </div>
 
+      {error && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ['Vacantes', vacantes.length, 'Registradas con requisitos y responsabilidades', Briefcase],
-          ['Candidatos', candidatos.length, 'Con informacion personal y profesional', Users],
-          ['Entrevistas', totalEntrevistas, 'Con observaciones y resultados', Calendar],
-          ['Contratados', totalContratados, 'Seleccionados para pasar a empleados', UserCheck2],
-        ].map(([label, value, caption, Icon]) => (
-          <article key={String(label)} className="rounded-lg border border-[#E2E8F0] bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label as string}</p>
-              {React.createElement(Icon as typeof Briefcase, { className: 'h-4 w-4 text-slate-400' })}
-            </div>
-            <strong className="mt-2 block text-3xl font-extrabold tracking-tight text-[#0F172A]">{value as number}</strong>
-            <p className="mt-1.5 text-[11px] font-semibold text-slate-400">{caption as string}</p>
-          </article>
-        ))}
+          ['Vacantes', vacancies.length, 'Registradas con requisitos y responsabilidades', Briefcase],
+          ['Candidatos', candidates.length, 'Con informacion personal y profesional', Users],
+          ['Entrevistas', totalInterviews, 'Con observaciones y resultados', Calendar],
+          ['Contratados', totalHired, 'Seleccionados para pasar a empleados', UserCheck2],
+        ].map(([label, value, caption, Icon]) => {
+          const SummaryIcon = Icon as typeof Briefcase;
+
+          return (
+            <article key={String(label)} className="rounded-lg border border-[#E2E8F0] bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label as string}</p>
+                <SummaryIcon className="h-4 w-4 text-slate-400" />
+              </div>
+              <strong className="mt-2 block text-3xl font-extrabold tracking-tight text-[#0F172A]">
+                {value as number}
+              </strong>
+              <p className="mt-1.5 text-[11px] font-semibold text-slate-400">{caption as string}</p>
+            </article>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-12">
@@ -417,7 +585,7 @@ export default function RecruitmentView() {
             </div>
             <button
               type="button"
-              onClick={() => setShowVacanteModal(true)}
+              onClick={() => setShowVacancyModal(true)}
               className="rounded-lg bg-[#F1F5F9] px-3.5 py-1.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-200"
             >
               Registrar
@@ -425,37 +593,49 @@ export default function RecruitmentView() {
           </div>
 
           <div className="max-h-[440px] space-y-4 overflow-y-auto pr-1">
-            {vacantes.map((vacante) => (
-              <article key={vacante.id} className="rounded-lg border border-slate-200 bg-slate-50/30 p-4 text-xs">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-800">{vacante.titulo}</h3>
-                    <span className="mt-0.5 inline-block text-[11px] font-semibold text-slate-400">
-                      {vacante.departamento} - {vacante.id}
+            {vacancies.map((vacancy) => {
+              const requirementList = vacancy.requirements.filter((item) => item.type === 'Requisito');
+              const responsibilityList = vacancy.requirements.filter((item) => item.type === 'Responsabilidad');
+
+              return (
+                <article key={vacancy.id} className="rounded-lg border border-slate-200 bg-slate-50/30 p-4 text-xs">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800">{vacancy.title}</h3>
+                      <span className="mt-0.5 inline-block text-[11px] font-semibold text-slate-400">
+                        {getVacancyLabel(vacancy)} - {vacancy.id}
+                      </span>
+                    </div>
+                    <span
+                      className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                        vacancy.status === 'Abierta'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                          : vacancy.status === 'En evaluacion'
+                            ? 'border-cyan-200 bg-cyan-50 text-cyan-600'
+                            : 'border-slate-200 bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {vacancy.status}
                     </span>
                   </div>
-                  <span
-                    className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                      vacante.estado === 'Abierta'
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
-                        : vacante.estado === 'En evaluacion'
-                          ? 'border-cyan-200 bg-cyan-50 text-cyan-600'
-                          : 'border-slate-200 bg-slate-100 text-slate-500'
-                    }`}
-                  >
-                    {vacante.estado}
-                  </span>
-                </div>
-                <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 leading-relaxed text-slate-700">
-                  <p>
-                    <strong className="text-slate-500">Requisitos:</strong> {vacante.requisitos}
-                  </p>
-                  <p>
-                    <strong className="text-slate-500">Responsabilidades:</strong> {vacante.responsabilidades}
-                  </p>
-                </div>
-              </article>
-            ))}
+                  <div className="mt-3 space-y-2 border-t border-slate-100 pt-3 leading-relaxed text-slate-700">
+                    <p>
+                      <strong className="text-slate-500">Descripcion:</strong> {vacancy.description}
+                    </p>
+                    <p>
+                      <strong className="text-slate-500">Requisitos:</strong>{' '}
+                      {requirementList.length > 0 ? joinDescriptions(requirementList) : 'Sin requisitos registrados.'}
+                    </p>
+                    <p>
+                      <strong className="text-slate-500">Responsabilidades:</strong>{' '}
+                      {responsibilityList.length > 0
+                        ? joinDescriptions(responsibilityList)
+                        : 'Sin responsabilidades registradas.'}
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
 
@@ -467,7 +647,7 @@ export default function RecruitmentView() {
               </h2>
               <p className="mt-0.5 text-[11px] text-slate-400">Datos personales, profesionales y vacante asociada.</p>
             </div>
-            {editingCandidateId && (
+            {editingCandidateId !== null && (
               <button type="button" onClick={resetCandidateForm} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100">
                 <X className="h-4 w-4" />
               </button>
@@ -476,50 +656,138 @@ export default function RecruitmentView() {
 
           <form onSubmit={handleGuardarCandidato} className="space-y-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Nombre completo">
-                <input required value={candidateForm.nombre} onChange={(e) => setCandidateForm((p) => ({ ...p, nombre: e.target.value }))} placeholder="Ej. Maria Perez" className="form-input" />
+              <Field label="Nombre">
+                <input
+                  required
+                  value={candidateForm.first_name}
+                  onChange={(event) =>
+                    setCandidateForm((current) => ({ ...current, first_name: event.target.value }))
+                  }
+                  placeholder="Ej. Maria"
+                  className="form-input"
+                />
+              </Field>
+              <Field label="Apellido">
+                <input
+                  required
+                  value={candidateForm.last_name}
+                  onChange={(event) =>
+                    setCandidateForm((current) => ({ ...current, last_name: event.target.value }))
+                  }
+                  placeholder="Ej. Perez"
+                  className="form-input"
+                />
+              </Field>
+              <Field label="Cedula">
+                <input
+                  required
+                  value={candidateForm.national_id}
+                  onChange={(event) =>
+                    setCandidateForm((current) => ({ ...current, national_id: event.target.value }))
+                  }
+                  placeholder="001-0000000-0"
+                  className="form-input"
+                />
               </Field>
               <Field label="Correo">
-                <input required type="email" value={candidateForm.correo} onChange={(e) => setCandidateForm((p) => ({ ...p, correo: e.target.value }))} placeholder="correo@email.com" className="form-input" />
+                <input
+                  required
+                  type="email"
+                  value={candidateForm.email}
+                  onChange={(event) => setCandidateForm((current) => ({ ...current, email: event.target.value }))}
+                  placeholder="correo@email.com"
+                  className="form-input"
+                />
               </Field>
               <Field label="Telefono">
-                <input required value={candidateForm.telefono} onChange={(e) => setCandidateForm((p) => ({ ...p, telefono: e.target.value }))} placeholder="809-555-0000" className="form-input" />
+                <input
+                  required
+                  value={candidateForm.phone}
+                  onChange={(event) => setCandidateForm((current) => ({ ...current, phone: event.target.value }))}
+                  placeholder="809-555-0000"
+                  className="form-input"
+                />
               </Field>
-              <Field label="Ubicacion">
-                <input value={candidateForm.ubicacion} onChange={(e) => setCandidateForm((p) => ({ ...p, ubicacion: e.target.value }))} placeholder="Ciudad o sector" className="form-input" />
+              <Field label="Direccion">
+                <input
+                  required
+                  value={candidateForm.address}
+                  onChange={(event) => setCandidateForm((current) => ({ ...current, address: event.target.value }))}
+                  placeholder="Ciudad o sector"
+                  className="form-input"
+                />
               </Field>
             </div>
-
-            <Field label="Vacante">
-              <select required value={candidateForm.vacanteId} onChange={(e) => setCandidateForm((p) => ({ ...p, vacanteId: e.target.value }))} className="form-input">
-                {vacantes.map((vacante) => (
-                  <option key={vacante.id} value={vacante.id}>
-                    {vacante.titulo}
-                  </option>
-                ))}
-              </select>
-            </Field>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Profesion">
-                <input required value={candidateForm.profesion} onChange={(e) => setCandidateForm((p) => ({ ...p, profesion: e.target.value }))} placeholder="Ej. Analista RRHH" className="form-input" />
+              <Field label="Fecha de nacimiento">
+                <input
+                  type="date"
+                  value={candidateForm.birth_date}
+                  onChange={(event) =>
+                    setCandidateForm((current) => ({ ...current, birth_date: event.target.value }))
+                  }
+                  className="form-input"
+                />
               </Field>
-              <Field label="Educacion">
-                <input value={candidateForm.educacion} onChange={(e) => setCandidateForm((p) => ({ ...p, educacion: e.target.value }))} placeholder="Grado o certificacion" className="form-input" />
+              <Field label="Vacante">
+                <select
+                  required
+                  value={candidateForm.vacancy_id}
+                  onChange={(event) =>
+                    setCandidateForm((current) => ({ ...current, vacancy_id: event.target.value }))
+                  }
+                  className="form-input"
+                >
+                  {vacancySelectOptions.length === 0 ? (
+                    <option value="">No hay vacantes disponibles</option>
+                  ) : (
+                    vacancySelectOptions.map((vacancy) => (
+                      <option key={vacancy.id} value={vacancy.id}>
+                        {vacancy.title}
+                      </option>
+                    ))
+                  )}
+                </select>
               </Field>
             </div>
 
-            <Field label="Experiencia profesional">
-              <textarea required rows={3} value={candidateForm.experiencia} onChange={(e) => setCandidateForm((p) => ({ ...p, experiencia: e.target.value }))} placeholder="Experiencia relevante para la vacante" className="form-input resize-none" />
+            <Field label="Nivel academico">
+              <input
+                required
+                value={candidateForm.academic_level}
+                onChange={(event) =>
+                  setCandidateForm((current) => ({ ...current, academic_level: event.target.value }))
+                }
+                placeholder="Ej. Licenciatura en Psicologia"
+                className="form-input"
+              />
             </Field>
 
-            <Field label="Resumen profesional">
-              <textarea rows={3} value={candidateForm.resumenProfesional} onChange={(e) => setCandidateForm((p) => ({ ...p, resumenProfesional: e.target.value }))} placeholder="Fortalezas, logros y notas de perfil" className="form-input resize-none" />
+            <Field label="Experiencia laboral">
+              <textarea
+                required
+                rows={3}
+                value={candidateForm.work_experience}
+                onChange={(event) =>
+                  setCandidateForm((current) => ({ ...current, work_experience: event.target.value }))
+                }
+                placeholder="Experiencia relevante para la vacante"
+                className="form-input resize-none"
+              />
             </Field>
 
-            <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#113B7A] py-3 text-xs font-bold text-white transition hover:bg-[#1E3A8A]">
+            <button
+              type="submit"
+              disabled={savingCandidate}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#113B7A] py-3 text-xs font-bold text-white transition hover:bg-[#1E3A8A] disabled:cursor-not-allowed disabled:opacity-70"
+            >
               {editingCandidateId ? <Edit3 className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-              {editingCandidateId ? 'Actualizar candidato' : 'Guardar candidato'}
+              {savingCandidate
+                ? 'Guardando...'
+                : editingCandidateId
+                  ? 'Actualizar candidato'
+                  : 'Guardar candidato'}
             </button>
           </form>
         </section>
@@ -534,35 +802,84 @@ export default function RecruitmentView() {
 
           <form onSubmit={handleRegistrarEntrevista} className="space-y-4">
             <Field label="Candidato">
-              <select required value={activeInterviewCandidateId} onChange={(e) => setInterviewCandidateId(e.target.value)} className="form-input">
-                {candidatos.map((candidato) => (
-                  <option key={candidato.id} value={candidato.id}>
-                    {candidato.nombre}
-                  </option>
-                ))}
+              <select
+                required
+                value={interviewCandidateId ?? ''}
+                onChange={(event) => setInterviewCandidateId(normalizeId(event.target.value))}
+                className="form-input"
+              >
+                {candidateRows.length === 0 ? (
+                  <option value="">No hay candidatos</option>
+                ) : (
+                  candidateRows.map((row) => (
+                    <option key={row.candidate.id} value={row.candidate.id}>
+                      {getCandidateName(row.candidate)}
+                    </option>
+                  ))
+                )}
               </select>
             </Field>
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Fecha">
-                <input required type="date" value={interviewForm.fecha} onChange={(e) => setInterviewForm((p) => ({ ...p, fecha: e.target.value }))} className="form-input" />
+                <input
+                  required
+                  type="date"
+                  value={interviewForm.interview_date}
+                  onChange={(event) =>
+                    setInterviewForm((current) => ({ ...current, interview_date: event.target.value }))
+                  }
+                  className="form-input"
+                />
               </Field>
               <Field label="Resultado">
-                <select value={interviewForm.resultado} onChange={(e) => setInterviewForm((p) => ({ ...p, resultado: e.target.value as InterviewResult }))} className="form-input">
-                  {resultadosEntrevista.map((resultado) => (
-                    <option key={resultado}>{resultado}</option>
+                <select
+                  value={interviewForm.result}
+                  onChange={(event) =>
+                    setInterviewForm((current) => ({
+                      ...current,
+                      result: event.target.value as InterviewResult,
+                    }))
+                  }
+                  className="form-input"
+                >
+                  {interviewResults.map((result) => (
+                    <option key={result}>{result}</option>
                   ))}
                 </select>
               </Field>
             </div>
+
             <Field label="Entrevistador">
-              <input required value={interviewForm.entrevistador} onChange={(e) => setInterviewForm((p) => ({ ...p, entrevistador: e.target.value }))} className="form-input" />
+              <input
+                required
+                value={interviewForm.interviewer}
+                onChange={(event) =>
+                  setInterviewForm((current) => ({ ...current, interviewer: event.target.value }))
+                }
+                className="form-input"
+              />
             </Field>
+
             <Field label="Observaciones">
-              <textarea rows={4} value={interviewForm.observaciones} onChange={(e) => setInterviewForm((p) => ({ ...p, observaciones: e.target.value }))} placeholder="Observaciones, hallazgos y siguientes pasos" className="form-input resize-none" />
+              <textarea
+                rows={4}
+                value={interviewForm.observations}
+                onChange={(event) =>
+                  setInterviewForm((current) => ({ ...current, observations: event.target.value }))
+                }
+                placeholder="Observaciones, hallazgos y siguientes pasos"
+                className="form-input resize-none"
+              />
             </Field>
-            <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-3 text-xs font-bold text-white transition hover:bg-slate-800">
+
+            <button
+              type="submit"
+              disabled={savingInterview}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-3 text-xs font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+            >
               <FileText className="h-4 w-4" />
-              Registrar entrevista
+              {savingInterview ? 'Guardando...' : 'Registrar entrevista'}
             </button>
           </form>
         </div>
@@ -576,16 +893,29 @@ export default function RecruitmentView() {
             <div className="flex flex-col gap-2 sm:flex-row">
               <label className="relative">
                 <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar candidato" className="form-input min-w-[210px] pl-9" />
+                <input
+                  value={candidateSearchQuery}
+                  onChange={(event) => setCandidateSearchQuery(event.target.value)}
+                  placeholder="Buscar candidato"
+                  className="form-input min-w-[210px] pl-9"
+                />
               </label>
-              <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value as typeof filtroEstado)} className="form-input min-w-[160px]">
+              <select
+                value={filterStatus}
+                onChange={(event) => setFilterStatus(event.target.value as typeof filterStatus)}
+                className="form-input min-w-[160px]"
+              >
                 <option>Todos</option>
-                {estadosCandidato.map((estado) => (
-                  <option key={estado}>{estado}</option>
+                {applicationStatuses.map((status) => (
+                  <option key={status}>{status}</option>
                 ))}
               </select>
-              <button type="button" onClick={handleActualizarDatos} className="flex items-center justify-center gap-2 rounded-lg bg-[#F1F5F9] px-3.5 py-2 text-[11px] font-bold text-slate-700 transition hover:bg-slate-200">
-                <RotateCw className={`h-3.5 w-3.5 text-slate-500 ${isUpdating ? 'animate-spin' : ''}`} />
+              <button
+                type="button"
+                onClick={handleActualizarDatos}
+                className="flex items-center justify-center gap-2 rounded-lg bg-[#F1F5F9] px-3.5 py-2 text-[11px] font-bold text-slate-700 transition hover:bg-slate-200"
+              >
+                <RotateCw className={`h-3.5 w-3.5 text-slate-500 ${refreshing ? 'animate-spin' : ''}`} />
                 Actualizar
               </button>
             </div>
@@ -604,49 +934,70 @@ export default function RecruitmentView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-600">
-                {candidatosFiltrados.map((candidato) => {
-                  const vacante = vacantes.find((item) => item.id === candidato.vacanteId);
-                  const entrevista = latestInterview(candidato);
+                {filteredCandidateRows.map((row) => {
+                  const latestInterview = getLatestInterview(row.application);
+                  const isContracted = row.application?.status === 'Contratado';
 
                   return (
-                    <tr key={candidato.id} className={selectedHireId === candidato.id ? 'bg-emerald-50/40' : 'hover:bg-slate-50/60'}>
+                    <tr
+                      key={row.candidate.id}
+                      className={
+                        selectedContractCandidateId === row.candidate.id || isContracted
+                          ? 'bg-emerald-50/40'
+                          : 'hover:bg-slate-50/60'
+                      }
+                    >
                       <td className="px-3 py-4">
-                        <span className="block text-[13px] font-bold text-slate-800">{candidato.nombre}</span>
-                        <span className="mt-1 block text-[10px] uppercase tracking-wider text-slate-400">{candidato.id} - {candidato.telefono}</span>
-                        <span className="mt-1 block text-[11px] text-slate-500">{candidato.correo}</span>
+                        <span className="block text-[13px] font-bold text-slate-800">
+                          {getCandidateName(row.candidate)}
+                        </span>
+                        <span className="mt-1 block text-[10px] uppercase tracking-wider text-slate-400">
+                          CAN-{row.candidate.id} - {row.candidate.phone}
+                        </span>
+                        <span className="mt-1 block text-[11px] text-slate-500">{row.candidate.email}</span>
                       </td>
-                      <td className="px-3 py-4 font-bold text-slate-700">{vacante?.titulo ?? 'Sin vacante'}</td>
+                      <td className="px-3 py-4 font-bold text-slate-700">
+                        {row.application?.vacancy?.title ?? 'Sin vacante'}
+                      </td>
                       <td className="max-w-[230px] px-3 py-4">
-                        <span className="block font-bold text-slate-700">{candidato.profesion}</span>
-                        <span className="mt-1 block truncate font-medium text-slate-500" title={candidato.experiencia}>
-                          {candidato.experiencia}
+                        <span className="block font-bold text-slate-700">{row.candidate.academic_level}</span>
+                        <span className="mt-1 block truncate font-medium text-slate-500" title={row.candidate.work_experience}>
+                          {row.candidate.work_experience}
                         </span>
                       </td>
                       <td className="px-3 py-4">
                         <select
-                          value={candidato.estado}
-                          onChange={(e) => handleCambiarEstado(candidato.id, e.target.value as CandidateStatus)}
+                          value={row.application?.status ?? 'En evaluacion'}
+                          onChange={(event) =>
+                            void handleCambiarEstado(row.candidate.id, event.target.value as ApplicationStatus)
+                          }
+                          disabled={!row.application}
                           className={`rounded-lg border px-2.5 py-2 text-[11px] font-bold ${
-                            candidato.estado === 'Contratado'
+                            (row.application?.status ?? 'En evaluacion') === 'Contratado'
                               ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                              : candidato.estado === 'Aprobado'
+                              : (row.application?.status ?? 'En evaluacion') === 'Aprobado'
                                 ? 'border-blue-300 bg-blue-50 text-blue-700'
-                                : candidato.estado === 'Rechazado'
+                                : (row.application?.status ?? 'En evaluacion') === 'Rechazado'
                                   ? 'border-rose-300 bg-rose-50 text-rose-600'
                                   : 'border-amber-300 bg-amber-50 text-amber-700'
                           }`}
                         >
-                          {estadosCandidato.map((estado) => (
-                            <option key={estado}>{estado}</option>
+                          {applicationStatuses.map((status) => (
+                            <option key={status}>{status}</option>
                           ))}
                         </select>
                       </td>
                       <td className="max-w-[240px] px-3 py-4">
-                        {entrevista ? (
+                        {latestInterview ? (
                           <>
-                            <span className="block font-bold text-slate-700">{entrevista.resultado} - {entrevista.fecha}</span>
-                            <span className="mt-1 block truncate font-medium italic text-slate-500" title={entrevista.observaciones}>
-                              {entrevista.observaciones}
+                            <span className="block font-bold text-slate-700">
+                              {latestInterview.result} - {latestInterview.interview_date}
+                            </span>
+                            <span
+                              className="mt-1 block truncate font-medium italic text-slate-500"
+                              title={latestInterview.observations}
+                            >
+                              {latestInterview.observations}
                             </span>
                           </>
                         ) : (
@@ -655,14 +1006,27 @@ export default function RecruitmentView() {
                       </td>
                       <td className="px-3 py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button type="button" onClick={() => handleEditarCandidato(candidato)} className="rounded-lg bg-slate-100 px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-200">
+                          <button
+                            type="button"
+                            onClick={() => handleEditarCandidato(row.candidate)}
+                            className="rounded-lg bg-slate-100 px-3 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-200"
+                          >
                             Editar
                           </button>
-                          <button type="button" onClick={() => setInterviewCandidateId(candidato.id)} className="rounded-lg bg-blue-50 px-3 py-2 text-[11px] font-bold text-[#113B7A] hover:bg-blue-100">
+                          <button
+                            type="button"
+                            onClick={() => setInterviewCandidateId(row.candidate.id)}
+                            className="rounded-lg bg-blue-50 px-3 py-2 text-[11px] font-bold text-[#113B7A] hover:bg-blue-100"
+                          >
                             Entrevista
                           </button>
-                          <button type="button" onClick={() => handleSeleccionarParaContratacion(candidato)} className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-emerald-700">
-                            Contratar
+                          <button
+                            type="button"
+                            onClick={() => void handleSeleccionarParaContratacion(row.candidate)}
+                            className="rounded-lg bg-emerald-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            disabled={isContracted}
+                          >
+                            {isContracted ? 'Contratado' : 'Contratar'}
                           </button>
                         </div>
                       </td>
@@ -670,7 +1034,7 @@ export default function RecruitmentView() {
                   );
                 })}
 
-                {candidatosFiltrados.length === 0 && (
+                {filteredCandidateRows.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-3 py-10 text-center text-slate-400">
                       No hay candidatos con los filtros actuales.
@@ -684,7 +1048,7 @@ export default function RecruitmentView() {
       </section>
 
       <AnimatePresence>
-        {showVacanteModal && (
+        {showVacancyModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
@@ -695,43 +1059,100 @@ export default function RecruitmentView() {
             >
               <div className="flex items-center justify-between border-b border-slate-100 bg-[#F8FAFC] px-6 py-4">
                 <h2 className="text-sm font-bold uppercase tracking-widest text-slate-800">Registrar vacante laboral</h2>
-                <button type="button" onClick={() => setShowVacanteModal(false)} className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
+                <button
+                  type="button"
+                  onClick={() => setShowVacancyModal(false)}
+                  className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
               <form onSubmit={handleGuardarVacante} className="space-y-4 p-6">
                 <Field label="Nombre del puesto">
-                  <input required value={vacanteForm.titulo} onChange={(e) => setVacanteForm((p) => ({ ...p, titulo: e.target.value }))} placeholder="Ej. Lider de Desarrollo Tecnico" className="form-input" />
+                  <input
+                    required
+                    value={vacancyForm.title}
+                    onChange={(event) => setVacancyForm((current) => ({ ...current, title: event.target.value }))}
+                    placeholder="Ej. Lider de Desarrollo Tecnico"
+                    className="form-input"
+                  />
                 </Field>
-                <Field label="Departamento o area">
-                  <select value={vacanteForm.departamento} onChange={(e) => setVacanteForm((p) => ({ ...p, departamento: e.target.value }))} className="form-input">
-                    <option>Gestion Humana</option>
-                    <option>Tecnologia</option>
-                    <option>Ventas</option>
-                    <option>Marketing</option>
-                    <option>Finanzas</option>
-                  </select>
+                <Field label="Descripcion del puesto">
+                  <textarea
+                    required
+                    rows={3}
+                    value={vacancyForm.description}
+                    onChange={(event) =>
+                      setVacancyForm((current) => ({ ...current, description: event.target.value }))
+                    }
+                    placeholder="Resumen general del puesto"
+                    className="form-input resize-none"
+                  />
+                </Field>
+                <Field label="Departamento o area ID">
+                  <input
+                    type="number"
+                    min="1"
+                    value={vacancyForm.department_id}
+                    onChange={(event) =>
+                      setVacancyForm((current) => ({ ...current, department_id: event.target.value }))
+                    }
+                    placeholder="Opcional"
+                    className="form-input"
+                  />
                 </Field>
                 <Field label="Requisitos">
-                  <textarea required rows={3} value={vacanteForm.requisitos} onChange={(e) => setVacanteForm((p) => ({ ...p, requisitos: e.target.value }))} placeholder="Experiencia, estudios y competencias requeridas" className="form-input resize-none" />
+                  <textarea
+                    required
+                    rows={3}
+                    value={vacancyForm.requirements}
+                    onChange={(event) =>
+                      setVacancyForm((current) => ({ ...current, requirements: event.target.value }))
+                    }
+                    placeholder="Un requisito por linea o en un solo texto"
+                    className="form-input resize-none"
+                  />
                 </Field>
                 <Field label="Responsabilidades">
-                  <textarea required rows={3} value={vacanteForm.responsabilidades} onChange={(e) => setVacanteForm((p) => ({ ...p, responsabilidades: e.target.value }))} placeholder="Funciones principales del puesto" className="form-input resize-none" />
+                  <textarea
+                    required
+                    rows={3}
+                    value={vacancyForm.responsibilities}
+                    onChange={(event) =>
+                      setVacancyForm((current) => ({ ...current, responsibilities: event.target.value }))
+                    }
+                    placeholder="Un texto o lista de funciones del puesto"
+                    className="form-input resize-none"
+                  />
                 </Field>
                 <Field label="Estado inicial">
-                  <select value={vacanteForm.estado} onChange={(e) => setVacanteForm((p) => ({ ...p, estado: e.target.value as VacancyStatus }))} className="form-input">
+                  <select
+                    value={vacancyForm.status}
+                    onChange={(event) =>
+                      setVacancyForm((current) => ({ ...current, status: event.target.value as VacancyStatus }))
+                    }
+                    className="form-input"
+                  >
                     <option>Abierta</option>
                     <option>En evaluacion</option>
                     <option>Cerrada</option>
                   </select>
                 </Field>
                 <div className="flex gap-3 border-t border-slate-100 pt-4 text-xs font-bold">
-                  <button type="button" onClick={() => setShowVacanteModal(false)} className="flex-1 rounded-lg bg-slate-100 py-3 text-slate-600 hover:bg-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowVacancyModal(false)}
+                    className="flex-1 rounded-lg bg-slate-100 py-3 text-slate-600 hover:bg-slate-200"
+                  >
                     Cancelar
                   </button>
-                  <button type="submit" className="flex-1 rounded-lg bg-[#113B7A] py-3 text-white shadow-md hover:bg-[#1E3A8A]">
-                    Publicar vacante
+                  <button
+                    type="submit"
+                    disabled={savingVacancy}
+                    className="flex-1 rounded-lg bg-[#113B7A] py-3 text-white shadow-md hover:bg-[#1E3A8A] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {savingVacancy ? 'Publicando...' : 'Publicar vacante'}
                   </button>
                 </div>
               </form>
