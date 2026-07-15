@@ -17,7 +17,7 @@ import {
 export function createHiringRouter(): Router {
   const router = Router();
 
-  // Prepared for Supabase, but intentionally using memory while DB connection is omitted.
+  // Preparado para Supabase, pero intencionadamente utilizando memoria mientras se omite la conexión a la base de datos.
   const repository = new InMemoryHiringRepository();
   const service = new HiringService(repository);
   const controller = new HiringController(service);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Search, Bell, Sun, Moon, HelpCircle, ChevronDown } from 'lucide-react';
+import { Search, Bell, Sun, Moon, HelpCircle, ChevronDown, LogOut } from 'lucide-react';
 import { ModuloId } from '../types';
+import { useAuth } from '../context/useAuth';
 
 interface HeaderProps {
   moduloActivo: ModuloId;
@@ -21,6 +22,7 @@ export default function Header({
 }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const { user, logout } = useAuth();
 
   // Get module Title in Spanish
   const moduloInfo: Record<ModuloId, { title: string; subtitle: string }> = {
@@ -138,7 +140,7 @@ export default function Header({
               />
             </div>
             <div className="hidden lg:flex flex-col min-w-0 text-left">
-              <span className="text-xs font-semibold text-slate-800 leading-none truncate">Laura Mendoza</span>
+              <span className="text-xs font-semibold text-slate-800 leading-none truncate">{user?.email ?? 'Laura Mendoza'}</span>
               <span className="text-[10px] text-slate-400 mt-0.5 leading-none font-medium">HR Manager</span>
             </div>
             <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
@@ -147,14 +149,20 @@ export default function Header({
           {showProfileMenu && (
             <div className="absolute right-0 mt-2 w-48 bg-white border border-[#E2E8F0] shadow-lg rounded-xl py-1.5 z-50 animate-fade-in-down">
               <div className="px-4 py-2 border-b border-slate-100 lg:hidden">
-                <span className="text-xs font-semibold text-slate-800 block">Laura Mendoza</span>
+                <span className="text-xs font-semibold text-slate-800 block">{user?.email ?? 'Laura Mendoza'}</span>
                 <span className="text-[10px] text-slate-400">HR Manager</span>
               </div>
               <button className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Mi Perfil</button>
               <button className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Mi Cuenta</button>
               <button className="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors">Políticas de Empresa</button>
               <div className="border-t border-slate-100 my-1"></div>
-              <button className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 transition-colors font-medium">Cerrar Sesión</button>
+              <button
+                onClick={() => logout()}
+                className="w-full text-left px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 transition-colors font-medium flex items-center gap-2"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Cerrar Sesión
+              </button>
             </div>
           )}
         </div>

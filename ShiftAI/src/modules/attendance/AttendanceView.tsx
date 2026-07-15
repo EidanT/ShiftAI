@@ -14,16 +14,26 @@ import {
   CheckCircle,
   AlertTriangle,
   MinusCircle,
-  Clock
+  Clock,
+  X
 } from 'lucide-react';
 import { RegistroAsistencia, Empleado } from '../../types';
+import { AnimatePresence, motion } from 'motion/react';
+import AttendanceForm from './form/AttendanceForm';
 
 interface AttendanceViewProps {
   asistencias: RegistroAsistencia[];
   empleados: Empleado[];
   busqueda: string;
   onEliminarRegistro: (id: string) => void;
-  onToggleManualModal: () => void;
+  onSubmitManualAttendance: (data: {
+    empleadoId: string;
+    fecha: string;
+    entrada: string;
+    salida: string;
+    horas: number;
+    estado: 'Presente' | 'Tardanza' | 'Ausente';
+  }) => void;
 }
 
 export default function AttendanceView({ 
@@ -31,8 +41,9 @@ export default function AttendanceView({
   empleados, 
   busqueda,
   onEliminarRegistro,
-  onToggleManualModal
+  onSubmitManualAttendance
 }: AttendanceViewProps) {
+  const [showManualModal, setShowManualModal] = useState(false);
   // Local state for filters
   const [selectedFecha, setSelectedFecha] = useState('2023-10-24');
   const [selectedDepto, setSelectedDepto] = useState('Todos los departamentos');
@@ -85,7 +96,7 @@ export default function AttendanceView({
           </div>
           
           <button 
-            onClick={onToggleManualModal}
+            onClick={() => setShowManualModal(true)}
             className="bg-[#0F172A] hover:bg-slate-800 text-white font-semibold text-xs px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-md hover:scale-105 active:scale-95 transition-all"
           >
             <Plus className="w-4 h-4" />
@@ -288,6 +299,41 @@ export default function AttendanceView({
           </div>
         </div>
       </div>
+
+      {/* Manual registry modal popup dialog */}
+      <AnimatePresence>
+        {showManualModal && (
+          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ ease: 'easeInOut', duration: 0.2 }}
+              className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-left flex flex-col"
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-[#F8FAFC]">
+                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Registro Administrativo Especial</h2>
+                <button 
+                  onClick={() => setShowManualModal(false)}
+                  className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <AttendanceForm
+                empleados={empleados}
+                onSubmit={(data) => {
+                  onSubmitManualAttendance(data);
+                  setShowManualModal(false);
+                }}
+                onCancel={() => setShowManualModal(false)}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

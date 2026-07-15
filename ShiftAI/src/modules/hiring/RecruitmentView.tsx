@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { sileo } from 'sileo';
 import {
   Briefcase,
   Calendar,
@@ -52,19 +53,8 @@ interface Candidato {
   fechaRegistro: string;
 }
 
-interface RecruitmentViewProps {
-  onTriggerToast: (text: string, sub?: string, type?: 'success' | 'info' | 'error') => void;
-}
-
-const STORAGE_KEY = 'shiftai.modulo1.reclutamiento';
-
 const estadosCandidato: CandidateStatus[] = ['En evaluacion', 'Aprobado', 'Rechazado', 'Contratado'];
-const resultadosEntrevista: InterviewResult[] = [
-  'Pendiente',
-  'Aprobado',
-  'Rechazado',
-  'Requiere segunda entrevista',
-];
+const resultadosEntrevista: InterviewResult[] = ['Pendiente', 'Aprobado', 'Rechazado', 'Requiere segunda entrevista'];
 
 const seedVacantes: Vacante[] = [
   {
@@ -74,7 +64,7 @@ const seedVacantes: Vacante[] = [
     requisitos: 'Licenciatura en Psicologia, 2 anos de experiencia, manejo de entrevistas.',
     responsabilidades: 'Publicar vacantes, filtrar candidatos y coordinar entrevistas.',
     estado: 'Abierta',
-    fechaCreacion: '2026-06-12',
+    fechaCreacion: '2026-05-12',
   },
   {
     id: 'VAC-102',
@@ -83,7 +73,7 @@ const seedVacantes: Vacante[] = [
     requisitos: 'Conocimientos basicos de redes, soporte a usuarios y documentacion.',
     responsabilidades: 'Atender tickets, registrar incidencias y escalar casos tecnicos.',
     estado: 'En evaluacion',
-    fechaCreacion: '2026-06-18',
+    fechaCreacion: '2026-05-20',
   },
 ];
 
@@ -92,70 +82,62 @@ const seedCandidatos: Candidato[] = [
     id: 'CAN-001',
     nombre: 'Laura Mendez',
     correo: 'laura.mendez@email.com',
-    telefono: '809-555-0142',
+    telefono: '809-555-0101',
     ubicacion: 'Santo Domingo',
-    profesion: 'Psicologa organizacional',
-    educacion: 'Licenciatura en Psicologia Industrial',
-    experiencia: '3 anos en reclutamiento masivo y entrevistas por competencias.',
-    resumenProfesional: 'Perfil orientado a gestion humana, clima laboral y seleccion por competencias.',
+    profesion: 'Psicologa Organizacional',
+    educacion: 'Licenciatura en Psicologia',
+    experiencia: '3 anos en seleccion de personal',
+    resumenProfesional: 'Especialista en procesos de reclutamiento y entrevistas por competencias.',
     vacanteId: 'VAC-101',
     estado: 'En evaluacion',
-    entrevistas: [
-      {
-        id: 'ENT-001',
-        fecha: '2026-06-20',
-        entrevistador: 'Laura Mendoza',
-        observaciones: 'Buen dominio de entrevistas y comunicacion clara.',
-        resultado: 'Requiere segunda entrevista',
-      },
-    ],
-    fechaRegistro: '2026-06-19',
+    entrevistas: [],
+    fechaRegistro: '2026-06-02',
   },
   {
     id: 'CAN-002',
     nombre: 'Carlos Rivera',
     correo: 'carlos.rivera@email.com',
-    telefono: '809-555-0188',
+    telefono: '809-555-0102',
     ubicacion: 'Santiago',
-    profesion: 'Tecnico de soporte',
-    educacion: 'Tecnologo en Redes',
-    experiencia: '1 ano dando soporte a usuarios internos.',
-    resumenProfesional: 'Experiencia en mesa de ayuda, documentacion y seguimiento de tickets.',
+    profesion: 'Tecnico en Soporte',
+    educacion: 'Tecnico en Redes y Telecomunicaciones',
+    experiencia: '1 ano en soporte tecnico a usuarios',
+    resumenProfesional: 'Buen manejo de tickets y resolucion de incidencias de primer nivel.',
     vacanteId: 'VAC-102',
     estado: 'Aprobado',
     entrevistas: [
       {
-        id: 'ENT-002',
-        fecha: '2026-06-22',
-        entrevistador: 'Rafael Ortiz',
-        observaciones: 'Aprobo prueba tecnica y muestra buena actitud de servicio.',
+        id: 'ENT-001',
+        fecha: '2026-06-10',
+        entrevistador: 'Laura Mendoza',
+        observaciones: 'Buen dominio tecnico, se aprueba para siguiente fase.',
         resultado: 'Aprobado',
       },
     ],
-    fechaRegistro: '2026-06-18',
+    fechaRegistro: '2026-06-05',
   },
   {
     id: 'CAN-003',
     nombre: 'Ana Torres',
     correo: 'ana.torres@email.com',
-    telefono: '809-555-0161',
-    ubicacion: 'Santo Domingo Este',
-    profesion: 'Generalista de RRHH',
-    educacion: 'Maestria en Gestion del Talento',
-    experiencia: '4 anos coordinando reclutamiento y onboarding.',
-    resumenProfesional: 'Candidata fuerte para liderazgo operativo de seleccion.',
+    telefono: '809-555-0103',
+    ubicacion: 'Santo Domingo',
+    profesion: 'Analista de Recursos Humanos',
+    educacion: 'Licenciatura en Administracion de Empresas',
+    experiencia: '4 anos en gestion de talento humano',
+    resumenProfesional: 'Experiencia liderando procesos de contratacion end-to-end.',
     vacanteId: 'VAC-101',
     estado: 'Contratado',
     entrevistas: [
       {
-        id: 'ENT-003',
-        fecha: '2026-06-21',
+        id: 'ENT-002',
+        fecha: '2026-06-08',
         entrevistador: 'Laura Mendoza',
-        observaciones: 'Seleccionada por ajuste al perfil y experiencia comprobable.',
+        observaciones: 'Seleccionada para contratacion inmediata.',
         resultado: 'Aprobado',
       },
     ],
-    fechaRegistro: '2026-06-17',
+    fechaRegistro: '2026-05-28',
   },
 ];
 
@@ -168,7 +150,7 @@ const emptyCandidateForm = {
   educacion: '',
   experiencia: '',
   resumenProfesional: '',
-  vacanteId: 'VAC-101',
+  vacanteId: seedVacantes[0]?.id ?? '',
 };
 
 const emptyVacancyForm = {
@@ -179,24 +161,23 @@ const emptyVacancyForm = {
   estado: 'Abierta' as VacancyStatus,
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
-const makeId = (prefix: string) => `${prefix}-${Math.floor(Math.random() * 9000) + 1000}`;
-
-function loadInitialData() {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { vacantes: seedVacantes, candidatos: seedCandidatos };
-    const parsed = JSON.parse(raw) as { vacantes: Vacante[]; candidatos: Candidato[] };
-    return {
-      vacantes: parsed.vacantes?.length ? parsed.vacantes : seedVacantes,
-      candidatos: parsed.candidatos ?? seedCandidatos,
-    };
-  } catch {
-    return { vacantes: seedVacantes, candidatos: seedCandidatos };
-  }
+function makeId(prefix: string): string {
+  return `${prefix}-${Math.floor(Math.random() * 900) + 100}`;
 }
 
-export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps) {
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function loadInitialData(): { vacantes: Vacante[]; candidatos: Candidato[] } {
+  return { vacantes: seedVacantes, candidatos: seedCandidatos };
+}
+
+function latestInterview(candidato: Candidato): Entrevista | undefined {
+  return [...candidato.entrevistas].sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+}
+
+export default function RecruitmentView() {
   const [initialData] = useState(loadInitialData);
   const [vacantes, setVacantes] = useState<Vacante[]>(initialData.vacantes);
   const [candidatos, setCandidatos] = useState<Candidato[]>(initialData.candidatos);
@@ -218,47 +199,33 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
   );
   const [isUpdating, setIsUpdating] = useState(false);
 
-  useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ vacantes, candidatos }));
-  }, [vacantes, candidatos]);
+  const totalEntrevistas = candidatos.reduce((acc, c) => acc + c.entrevistas.length, 0);
+  const totalContratados = candidatos.filter((c) => c.estado === 'Contratado').length;
 
-  const totalEntrevistas = candidatos.reduce((total, candidato) => total + candidato.entrevistas.length, 0);
-  const totalContratados = candidatos.filter((candidato) => candidato.estado === 'Contratado').length;
-  const activeInterviewCandidateId = candidatos.some((candidato) => candidato.id === interviewCandidateId)
+  const activeInterviewCandidateId = candidatos.some((c) => c.id === interviewCandidateId)
     ? interviewCandidateId
     : (candidatos[0]?.id ?? '');
 
   const candidatosFiltrados = candidatos.filter((candidato) => {
-    const vacante = vacantes.find((item) => item.id === candidato.vacanteId);
-    const texto = `${candidato.nombre} ${candidato.correo} ${candidato.profesion} ${vacante?.titulo ?? ''}`.toLowerCase();
-    const coincideBusqueda = texto.includes(busqueda.toLowerCase());
-    const coincideEstado = filtroEstado === 'Todos' || candidato.estado === filtroEstado;
-    return coincideBusqueda && coincideEstado;
+    const matchesEstado = filtroEstado === 'Todos' || candidato.estado === filtroEstado;
+    const term = busqueda.trim().toLowerCase();
+    const matchesBusqueda =
+      term === '' || candidato.nombre.toLowerCase().includes(term) || candidato.profesion.toLowerCase().includes(term);
+    return matchesEstado && matchesBusqueda;
   });
 
   const resetCandidateForm = () => {
-    setCandidateForm({ ...emptyCandidateForm, vacanteId: vacantes[0]?.id ?? '' });
     setEditingCandidateId(null);
+    setCandidateForm(emptyCandidateForm);
   };
 
-  const handleGuardarVacante = (event: React.FormEvent) => {
-    event.preventDefault();
-    const nuevaVacante: Vacante = {
-      id: makeId('VAC'),
-      ...vacanteForm,
-      fechaCreacion: today(),
-    };
-    setVacantes((prev) => [nuevaVacante, ...prev]);
-    setCandidateForm((prev) => ({ ...prev, vacanteId: prev.vacanteId || nuevaVacante.id }));
-    setVacanteForm(emptyVacancyForm);
-    setShowVacanteModal(false);
-    onTriggerToast('Vacante registrada', `Se publico "${nuevaVacante.titulo}" con requisitos y responsabilidades.`, 'success');
-  };
-
-  const handleGuardarCandidato = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!candidateForm.vacanteId) {
-      onTriggerToast('Vacante requerida', 'Registre o seleccione una vacante antes de guardar candidatos.', 'error');
+  const handleGuardarCandidato = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!candidateForm.nombre.trim()) {
+      sileo.error({
+        title: 'Nombre requerido',
+        description: 'El nombre completo del candidato es obligatorio.',
+      });
       return;
     }
 
@@ -268,11 +235,15 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
           candidato.id === editingCandidateId ? { ...candidato, ...candidateForm } : candidato,
         ),
       );
-      onTriggerToast('Candidato actualizado', `Se actualizo la ficha de ${candidateForm.nombre}.`, 'success');
+      sileo.success({
+        title: 'Candidato actualizado',
+        description: `Se actualizo la ficha de ${candidateForm.nombre}.`,
+      });
       resetCandidateForm();
       return;
     }
 
+    const vacante = vacantes.find((v) => v.id === candidateForm.vacanteId);
     const nuevoCandidato: Candidato = {
       id: makeId('CAN'),
       ...candidateForm,
@@ -282,8 +253,10 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
     };
 
     setCandidatos((prev) => [nuevoCandidato, ...prev]);
-    setInterviewCandidateId(nuevoCandidato.id);
-    onTriggerToast('Candidato registrado', `${nuevoCandidato.nombre} fue agregado a la vacante seleccionada.`, 'success');
+    sileo.success({
+      title: 'Candidato registrado',
+      description: `Ficha cargada con éxito para la vacante "${vacante?.titulo ?? 'seleccionada'}".`,
+    });
     resetCandidateForm();
   };
 
@@ -300,21 +273,76 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
       resumenProfesional: candidato.resumenProfesional,
       vacanteId: candidato.vacanteId,
     });
-    onTriggerToast('Ficha cargada', `Ahora puede actualizar la informacion de ${candidato.nombre}.`, 'info');
+    sileo.info({
+      title: 'Ficha cargada',
+      description: `Ahora puede actualizar la información de ${candidato.nombre}.`,
+    });
   };
 
-  const handleCambiarEstado = (id: string, estado: CandidateStatus) => {
-    setCandidatos((prev) => prev.map((candidato) => (candidato.id === id ? { ...candidato, estado } : candidato)));
-    if (estado === 'Contratado') setSelectedHireId(id);
-    onTriggerToast('Estado actualizado', `La candidatura cambio a "${estado}".`, 'success');
+  const handleCambiarEstado = (id: string, nuevoEstado: CandidateStatus) => {
+    const candidato = candidatos.find((c) => c.id === id);
+    if (!candidato) return;
+
+    const estadoAnterior = candidato.estado;
+    setCandidatos((prev) => prev.map((c) => (c.id === id ? { ...c, estado: nuevoEstado } : c)));
+    sileo.success({
+      title: 'Estatus actualizado',
+      description: `${candidato.nombre} cambió de "${estadoAnterior}" a "${nuevoEstado}".`,
+    });
   };
 
-  const handleRegistrarEntrevista = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!activeInterviewCandidateId) {
-      onTriggerToast('Candidato requerido', 'Seleccione un candidato para registrar la entrevista.', 'error');
+  const handleSeleccionarParaContratacion = (candidato: Candidato) => {
+    setSelectedHireId(candidato.id);
+    setCandidatos((prev) => prev.map((c) => (c.id === candidato.id ? { ...c, estado: 'Contratado' } : c)));
+    sileo.success({
+      title: 'Candidato seleccionado para contratación',
+      description: `${candidato.nombre} quedó marcado como contratado.`,
+    });
+  };
+
+  const handleGuardarVacante = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vacanteForm.titulo.trim()) {
+      sileo.error({
+        title: 'Título requerido',
+        description: 'Por favor complete el nombre de la posición.',
+      });
       return;
     }
+
+    const nuevaVacante: Vacante = {
+      id: makeId('VAC'),
+      ...vacanteForm,
+      requisitos: vacanteForm.requisitos || 'Licenciatura o carrera técnica afín.',
+      responsabilidades: vacanteForm.responsabilidades || 'Tareas operativas y colaboración del puesto.',
+      fechaCreacion: today(),
+    };
+
+    setVacantes((prev) => [...prev, nuevaVacante]);
+    sileo.success({
+      title: 'Nueva vacante publicada',
+      description: `Se registró la posición "${nuevaVacante.titulo}" correctamente.`,
+    });
+
+    setVacanteForm(emptyVacancyForm);
+    setShowVacanteModal(false);
+  };
+
+  const handleActualizarDatos = () => {
+    setIsUpdating(true);
+    window.setTimeout(() => {
+      setIsUpdating(false);
+      sileo.info({
+        title: 'Planilla de Selección Sincronizada',
+        description: 'Base de datos de reclutamiento refrescada correctamente.',
+      });
+    }, 800);
+  };
+
+  const handleRegistrarEntrevista = (e: React.FormEvent) => {
+    e.preventDefault();
+    const candidato = candidatos.find((c) => c.id === activeInterviewCandidateId);
+    if (!candidato) return;
 
     const entrevista: Entrevista = {
       id: makeId('ENT'),
@@ -323,44 +351,21 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
     };
 
     setCandidatos((prev) =>
-      prev.map((candidato) =>
-        candidato.id === activeInterviewCandidateId
-          ? {
-              ...candidato,
-              entrevistas: [entrevista, ...candidato.entrevistas],
-              estado:
-                entrevista.resultado === 'Aprobado'
-                  ? 'Aprobado'
-                  : entrevista.resultado === 'Rechazado'
-                    ? 'Rechazado'
-                    : candidato.estado,
-            }
-          : candidato,
-      ),
+      prev.map((c) => (c.id === candidato.id ? { ...c, entrevistas: [entrevista, ...c.entrevistas] } : c)),
     );
 
-    const candidato = candidatos.find((item) => item.id === activeInterviewCandidateId);
-    onTriggerToast('Entrevista registrada', `Observaciones y resultado guardados para ${candidato?.nombre ?? 'el candidato'}.`, 'success');
-    setInterviewForm({ fecha: today(), entrevistador: 'Laura Mendoza', resultado: 'Pendiente', observaciones: '' });
-  };
+    sileo.success({
+      title: 'Entrevista registrada',
+      description: `Se guardó la entrevista de ${candidato.nombre}.`,
+    });
 
-  const handleSeleccionarParaContratacion = (candidato: Candidato) => {
-    setSelectedHireId(candidato.id);
-    setCandidatos((prev) =>
-      prev.map((item) => (item.id === candidato.id ? { ...item, estado: 'Contratado' } : item)),
-    );
-    onTriggerToast('Candidato seleccionado', `${candidato.nombre} quedo marcado para contratacion.`, 'success');
+    setInterviewForm({
+      fecha: today(),
+      entrevistador: interviewForm.entrevistador,
+      resultado: 'Pendiente',
+      observaciones: '',
+    });
   };
-
-  const handleActualizarDatos = () => {
-    setIsUpdating(true);
-    window.setTimeout(() => {
-      setIsUpdating(false);
-      onTriggerToast('Datos actualizados', 'La informacion local del modulo fue refrescada.', 'info');
-    }, 650);
-  };
-
-  const latestInterview = (candidato: Candidato) => candidato.entrevistas[0];
 
   return (
     <div className="space-y-6 animate-fade-in text-left">

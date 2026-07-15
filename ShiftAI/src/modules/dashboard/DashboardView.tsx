@@ -15,19 +15,18 @@ import {
   Eye
 } from 'lucide-react';
 import { SolicitudPendiente } from '../../types';
+import { sileo } from 'sileo';
 
 interface DashboardViewProps {
   solicitudes: SolicitudPendiente[];
   onAprobarSolicitud: (id: string, depto: string) => void;
   onRechazarSolicitud: (id: string, depto: string) => void;
-  onToggleManualModal: () => void;
 }
 
 export default function DashboardView({ 
   solicitudes, 
   onAprobarSolicitud, 
-  onRechazarSolicitud,
-  onToggleManualModal
+  onRechazarSolicitud
 }: DashboardViewProps) {
   const [selectedDay, setSelectedDay] = useState<number>(24);
 
@@ -70,7 +69,10 @@ export default function DashboardView({
             <span>Hoy, 24 Oct 2023</span>
           </button>
           <button 
-            onClick={onToggleManualModal}
+            onClick={() => sileo.success({
+              title: 'Exportación Exitosa',
+              description: 'El reporte consolidado del mes se ha descargado correctamente.'
+            })}
             className="bg-[#0F172A] hover:bg-slate-800 text-white font-semibold text-xs px-4 py-2 rounded-lg flex items-center gap-2 shadow-md hover:scale-105 active:scale-95 transition-all"
           >
             <Download className="w-4 h-4" />

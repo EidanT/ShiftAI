@@ -1,10 +1,16 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { logger } from '../config/logger';
+import { HttpError } from '../utils/httpError';
 
 export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction): void {
   if (err instanceof ZodError) {
     res.status(400).json({ errors: err.flatten().fieldErrors });
+    return;
+  }
+
+  if (err instanceof HttpError) {
+    res.status(err.statusCode).json({ error: err.message });
     return;
   }
 
