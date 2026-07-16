@@ -8,25 +8,19 @@ The service exposes:
 
 from __future__ import annotations
 
-import logging
-
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.requests import Request
 
 from config.settings import get_settings
+from logger import configure_logging, get_logger
 from registry import build_provider
 from router.v1.cv import router as cv_router
 
-logger = logging.getLogger(__name__)
-
 settings = get_settings()
-
-logging.basicConfig(
-    level=settings.service_log_level,
-    format="%(asctime)s %(levelname)s %(name)s %(message)s",
-)
+configure_logging(settings)
+logger = get_logger(__name__)
 
 app = FastAPI(
     title="ShiftAI Services",
@@ -38,6 +32,19 @@ app = FastAPI(
 app.state.provider = build_provider(settings)
 
 app.include_router(cv_router, prefix="/v1/cv", tags=["cv"])
+
+
+@app.on_event("startup")
+async def log_service_ready() -> None:
+    logger.info(
+        "service.ready host=%s port=%s service_level=%s uvicorn_level=%s uvicorn_error_level=%s uvicorn_access_log_level=%s",
+        settings.service_host,
+        settings.service_port,
+        settings.service_log_level,
+        settings.uvicorn_log_level,
+        settings.uvicorn_error_log_level,
+        settings.uvicorn_access_log_level,
+    )
 
 
 @app.get("/health", tags=["health"])

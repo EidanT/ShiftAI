@@ -3,15 +3,13 @@ from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# A sentinel for `llm_provider` that triggers auto-detection from
-# `llm_base_url`. Useful when switching between vendors (OpenRouter, LM
-# Studio, Ollama, etc.) by editing only the base URL.
+
 _AUTO = "auto"
 
 
 def _resolve_provider(base_url: str, requested: str) -> str:
     """Apply the `auto` sentinel or fall back to host-based detection."""
-    # Imported lazily to avoid a circular import at module load time.
+    
     from providers.autodetect import detect_provider
 
     if requested and requested != _AUTO:
@@ -31,6 +29,9 @@ class Settings(BaseSettings):
     service_host: str = "0.0.0.0"
     service_port: int = 8000
     service_log_level: str = "INFO"
+    uvicorn_log_level: str = "INFO"
+    uvicorn_error_log_level: str = "INFO"
+    uvicorn_access_log_level: str = "INFO"
 
     # CV Processing
     cv_max_size_bytes: int = 15 * 1024 * 1024
@@ -59,7 +60,7 @@ class Settings(BaseSettings):
 
     @property
     def resolved_llm_provider(self) -> Literal["openai_compatible", "ollama", "anthropic"]:
-        return _resolve_provider(self.llm_base_url, self.llm_provider)  # type: ignore[return-value]
+        return _resolve_provider(self.llm_base_url, self.llm_provider)  
 
 
 @lru_cache(maxsize=1)

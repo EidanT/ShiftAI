@@ -76,8 +76,7 @@ class OpenAICompatibleProvider(LLMProvider):
         if not isinstance(payload, dict):
             return ""
 
-        # Surface upstream errors as a visible, non-empty string so the caller
-        # can see the cause instead of getting a 502 with a generic message.
+        
         if "error" in payload and "choices" not in payload:
             err = payload["error"]
             code = err.get("code", "unknown")
@@ -92,12 +91,12 @@ class OpenAICompatibleProvider(LLMProvider):
         if not isinstance(first, dict):
             return ""
 
-        # Streaming-style: `delta` instead of `message`.
+       
         message = first.get("message") or first.get("delta") or {}
         if not isinstance(message, dict):
             return ""
 
-        # Try the obvious field, then fall back to alternates some providers use.
+        
         content = message.get("content")
         if content is None:
             content = message.get("reasoning_content") or message.get("text") or ""

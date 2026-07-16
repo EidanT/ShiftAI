@@ -31,18 +31,13 @@ class ProtocolSpec(BaseModel):
 
     protocol: ProviderProtocol
 
-    # Ejemplo:
-    # - "v1" para /v1
-    # - None para APIs sin versionado por URL, como Ollama nativo.
+    
     default_url_version: str | None = None
 
-    # Ejemplo:
-    # - "/{url_version}" => /v1
-    # - "/api" => /api
+    
     base_path_template: str
 
-    # Para APIs que usan versión por header, no por URL.
-    # Anthropic usa anthropic-version.
+    
     default_header_version: str | None = None
 
     endpoints: dict[EndpointName, EndpointSpec]
