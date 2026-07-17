@@ -1,7 +1,7 @@
 [project]
 name = "shiftai-services"
 version = "0.1.0"
-description = "IA shift
+description = "IA shift"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115",
