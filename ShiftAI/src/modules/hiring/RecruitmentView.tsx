@@ -38,7 +38,11 @@ import {
 } from './hiringApi';
 
 interface RecruitmentViewProps {
-  onTriggerToast: (text: string, sub?: string, type?: 'success' | 'info' | 'error') => void;
+  onTriggerToast?: (
+    text: string,
+    sub?: string,
+    type?: 'success' | 'info' | 'error'
+  ) => void;
 }
 
 interface VacancyFormState {
@@ -190,7 +194,7 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No fue posible cargar el modulo de reclutamiento.';
       setError(message);
-      onTriggerToast('No se pudo cargar el modulo', message, 'error');
+      onTriggerToast?.('No se pudo cargar el modulo', message, 'error');
       return false;
     } finally {
       setLoading(false);
@@ -307,18 +311,18 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
       };
 
       if (payload.requirements.length === 0) {
-        onTriggerToast('Faltan requisitos', 'Agregue al menos un requisito o responsabilidad para publicar la vacante.', 'error');
+        onTriggerToast?.('Faltan requisitos', 'Agregue al menos un requisito o responsabilidad para publicar la vacante.', 'error');
         return;
       }
 
       const createdVacancy = await createVacancy(payload);
       setVacancyForm(emptyVacancyForm);
       setShowVacancyModal(false);
-      onTriggerToast('Vacante registrada', `Se publico "${createdVacancy.title}" correctamente.`, 'success');
+      onTriggerToast?.('Vacante registrada', `Se publico "${createdVacancy.title}" correctamente.`, 'success');
       await refreshData();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No fue posible guardar la vacante.';
-      onTriggerToast('No se pudo guardar la vacante', message, 'error');
+      onTriggerToast?.('No se pudo guardar la vacante', message, 'error');
     } finally {
       setSavingVacancy(false);
     }
@@ -329,7 +333,7 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
 
     const vacancyId = normalizeId(candidateForm.vacancy_id);
     if (!vacancyId) {
-      onTriggerToast('Vacante requerida', 'Seleccione una vacante antes de guardar el candidato.', 'error');
+      onTriggerToast?.('Vacante requerida', 'Seleccione una vacante antes de guardar el candidato.', 'error');
       return;
     }
 
@@ -365,7 +369,7 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
           });
         }
 
-        onTriggerToast('Candidato actualizado', `${payload.first_name} fue actualizado correctamente.`, 'success');
+        onTriggerToast?.('Candidato actualizado', `${payload.first_name} fue actualizado correctamente.`, 'success');
       } else {
         const createdCandidate = await createCandidate(payload);
         await createApplication({
@@ -373,7 +377,7 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
           vacancy_id: vacancyId,
           status: 'En evaluacion',
         });
-        onTriggerToast(
+        onTriggerToast?.(
           'Candidato registrado',
           `${createdCandidate.first_name} ${createdCandidate.last_name} fue agregado a la vacante seleccionada.`,
           'success',
@@ -384,7 +388,7 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
       await refreshData();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No fue posible guardar el candidato.';
-      onTriggerToast('No se pudo guardar el candidato', message, 'error');
+      onTriggerToast?.('No se pudo guardar el candidato', message, 'error');
     } finally {
       setSavingCandidate(false);
     }
@@ -405,13 +409,13 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
       work_experience: candidate.work_experience,
       vacancy_id: String(application?.vacancy_id ?? vacancies[0]?.id ?? ''),
     });
-    onTriggerToast('Ficha cargada', `Ahora puede actualizar la informacion de ${getCandidateName(candidate)}.`, 'info');
+    onTriggerToast?.('Ficha cargada', `Ahora puede actualizar la informacion de ${getCandidateName(candidate)}.`, 'info');
   };
 
   const handleCambiarEstado = async (candidateId: number, status: ApplicationStatus) => {
     const application = applicationByCandidateId.get(candidateId);
     if (!application) {
-      onTriggerToast('Postulacion no encontrada', 'Ese candidato aun no tiene una postulacion registrada.', 'error');
+      onTriggerToast?.('Postulacion no encontrada', 'Ese candidato aun no tiene una postulacion registrada.', 'error');
       return;
     }
 
@@ -427,16 +431,16 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
           throw new Error('No se pudo resolver el candidato seleccionado.');
         }
 
-        onTriggerToast('Candidato contratado', `${getCandidateName(candidate)} paso a la plantilla activa.`, 'success');
+        onTriggerToast?.('Candidato contratado', `${getCandidateName(candidate)} paso a la plantilla activa.`, 'success');
       } else {
         await updateApplicationStatus(application.id, status);
-        onTriggerToast('Estado actualizado', `La candidatura cambio a "${status}".`, 'success');
+        onTriggerToast?.('Estado actualizado', `La candidatura cambio a "${status}".`, 'success');
       }
 
       await refreshData();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No fue posible actualizar el estado.';
-      onTriggerToast('No se pudo actualizar el estado', message, 'error');
+      onTriggerToast?.('No se pudo actualizar el estado', message, 'error');
     }
   };
 
@@ -444,12 +448,12 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
     event.preventDefault();
 
     if (!interviewCandidate) {
-      onTriggerToast('Candidato requerido', 'Seleccione un candidato con postulacion para registrar la entrevista.', 'error');
+      onTriggerToast?.('Candidato requerido', 'Seleccione un candidato con postulacion para registrar la entrevista.', 'error');
       return;
     }
 
     if (!interviewCandidate.application) {
-      onTriggerToast('Postulacion requerida', 'Primero debe existir una postulacion para registrar la entrevista.', 'error');
+      onTriggerToast?.('Postulacion requerida', 'Primero debe existir una postulacion para registrar la entrevista.', 'error');
       return;
     }
 
@@ -469,7 +473,7 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
         observations: '',
         result: 'Pendiente',
       });
-      onTriggerToast(
+      onTriggerToast?.(
         'Entrevista registrada',
         `Se guardaron las observaciones de ${getCandidateName(interviewCandidate.candidate)}.`,
         'success',
@@ -477,7 +481,7 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
       await refreshData();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No fue posible registrar la entrevista.';
-      onTriggerToast('No se pudo registrar la entrevista', message, 'error');
+      onTriggerToast?.('No se pudo registrar la entrevista', message, 'error');
     } finally {
       setSavingInterview(false);
     }
@@ -486,7 +490,7 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
   const handleSeleccionarParaContratacion = async (candidate: Candidate) => {
     const application = applicationByCandidateId.get(candidate.id);
     if (!application) {
-      onTriggerToast('Postulacion no encontrada', 'Ese candidato no tiene una postulacion asociada.', 'error');
+      onTriggerToast?.('Postulacion no encontrada', 'Ese candidato no tiene una postulacion asociada.', 'error');
       return;
     }
 
@@ -496,18 +500,18 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
         hire_date: today(),
         status: 'Activo',
       });
-      onTriggerToast('Candidato contratado', `${getCandidateName(candidate)} quedo registrado como empleado.`, 'success');
+      onTriggerToast?.('Candidato contratado', `${getCandidateName(candidate)} quedo registrado como empleado.`, 'success');
       await refreshData();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No fue posible contratar al candidato.';
-      onTriggerToast('No se pudo contratar al candidato', message, 'error');
+      onTriggerToast?.('No se pudo contratar al candidato', message, 'error');
     }
   };
 
   const handleActualizarDatos = async () => {
     const success = await refreshData();
     if (success) {
-      onTriggerToast('Datos actualizados', 'La informacion del modulo fue refrescada desde Supabase.', 'info');
+      onTriggerToast?.('Datos actualizados', 'La informacion del modulo fue refrescada desde Supabase.', 'info');
     }
   };
 
