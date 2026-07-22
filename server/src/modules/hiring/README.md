@@ -26,17 +26,17 @@ Estructura preparada a partir del UML `uml`.
 
 ## Estado actual
 
-El router usa `InMemoryHiringRepository` para omitir la conexion a Supabase por ahora.
-El adaptador `SupabaseHiringRepository` queda preparado para mapear contra las tablas
-PostgreSQL del UML cuando se configure la base de datos.
+El router usa `SupabaseHiringRepository` como implementacion activa.
+El modulo ya lee y escribe directamente en las tablas PostgreSQL creadas por la
+migracion del UML.
 
 La migracion base esta en:
 
 `server/supabase/migrations/001_hiring_module.sql`
 
-## Activacion futura de Supabase
+## Requisitos de entorno
 
 1. Ejecutar la migracion SQL en Supabase.
 2. Configurar `SUPABASE_URL` y `SUPABASE_SECRET_KEY` en `.env`.
-3. Cambiar el repositorio instanciado en `hiring.router.ts` de
-   `InMemoryHiringRepository` a `SupabaseHiringRepository`.
+3. Verificar que el frontend apunte al backend con `VITE_API_BASE_URL` o al
+   valor por defecto `http://localhost:3000/api/v1`.

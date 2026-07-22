@@ -440,6 +440,28 @@ export class SupabaseHiringRepository implements IHiringRepository {
     const application = applications.find((item) => item.id === applicationId);
     if (!application?.candidate) throw new Error('Postulacion no encontrada');
 
+    const { data: existingEmployee, error: existingEmployeeError } = await getSupabase()
+      .from('empleado')
+      .select('*')
+      .eq('id_candidato', application.candidate.id)
+      .maybeSingle();
+
+    if (existingEmployeeError) throw new Error(existingEmployeeError.message);
+
+    await this.updateApplicationStatus(applicationId, 'Contratado');
+
+    if (existingEmployee) {
+      return {
+        id: existingEmployee.id_empleado,
+        candidate_id: existingEmployee.id_candidato,
+        first_name: existingEmployee.nombre,
+        last_name: existingEmployee.apellido,
+        national_id: existingEmployee.cedula,
+        hire_date: existingEmployee.fecha_ingreso,
+        status: existingEmployee.estado,
+      };
+    }
+
     const { data, error } = await getSupabase()
       .from('empleado')
       .insert({
@@ -458,7 +480,6 @@ export class SupabaseHiringRepository implements IHiringRepository {
       .single();
 
     if (error) throw new Error(error.message);
-    await this.updateApplicationStatus(applicationId, 'Contratado');
 
     return {
       id: data.id_empleado,
