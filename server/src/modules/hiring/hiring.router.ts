@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { InMemoryHiringRepository } from './hiring.repository';
 import { HiringService } from './hiring.service';
 import { HiringController } from './hiring.controller';
@@ -14,6 +15,17 @@ import {
   UpdateCandidateSchema,
 } from './hiring.types';
 
+const upload = multer({
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype !== 'application/pdf') {
+      cb(new Error('Solo se permiten archivos PDF'));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
 export function createHiringRouter(): Router {
   const router = Router();
 
@@ -21,6 +33,8 @@ export function createHiringRouter(): Router {
   const repository = new InMemoryHiringRepository();
   const service = new HiringService(repository);
   const controller = new HiringController(service);
+
+  router.post('/candidates/analyze-cv', upload.single('file'), controller.analyzeCV);
 
   router.get('/vacancies', controller.getVacancies);
   router.post('/vacancies', writeLimiter, validate(CreateVacancySchema), controller.createVacancy);

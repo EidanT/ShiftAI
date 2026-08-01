@@ -51,6 +51,11 @@ interface Candidato {
   estado: CandidateStatus;
   entrevistas: Entrevista[];
   fechaRegistro: string;
+  score?: number;
+  experienciaExtraida?: string;
+  especializacionExtraida?: string;
+  recomendado?: boolean;
+  justificacion?: string;
 }
 
 const estadosCandidato: CandidateStatus[] = ['En evaluacion', 'Aprobado', 'Rechazado', 'Contratado'];
@@ -61,8 +66,8 @@ const seedVacantes: Vacante[] = [
     id: 'VAC-101',
     titulo: 'Analista de Recursos Humanos',
     departamento: 'Gestion Humana',
-    requisitos: 'Licenciatura en Psicologia, 2 anos de experiencia, manejo de entrevistas.',
-    responsabilidades: 'Publicar vacantes, filtrar candidatos y coordinar entrevistas.',
+    requisitos: 'Licenciatura en Psicologia Industrial o Administracion de Empresas, experiencia minima de 2 anos en reclutamiento y seleccion de personal, conocimiento en pruebas psicometricas y legislacion laboral, manejo de Office y portales de empleo.',
+    responsabilidades: 'Publicar vacantes en portales de empleo, preseleccionar curriculums segun perfil solicitado, coordinar y realizar entrevistas iniciales, aplicar pruebas psicometricas y tecnicas, dar seguimiento al proceso de contratacion y onboarding.',
     estado: 'Abierta',
     fechaCreacion: '2026-05-12',
   },
@@ -177,6 +182,41 @@ function latestInterview(candidato: Candidato): Entrevista | undefined {
   return [...candidato.entrevistas].sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
 }
 
+async function analyzeCVWithAI(
+  file: File,
+  requirements: string,
+  servicesUrl: string,
+  setIsAnalyzing: (v: boolean) => void,
+  onResult: (result: { score: number; experiencia: string; especializacion: string; recomendado: boolean; justificacion: string }) => void,
+) {
+  setIsAnalyzing(true);
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('requirements', requirements);
+
+    const response = await fetch(`${servicesUrl}/candidates/analyze-cv`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(err);
+    }
+
+    const data = await response.json();
+    onResult(data);
+  } catch (err) {
+    sileo.error({
+      title: 'Error al analizar CV',
+      description: err instanceof Error ? err.message : 'Ocurrio un error inesperado',
+    });
+  } finally {
+    setIsAnalyzing(false);
+  }
+}
+
 export default function RecruitmentView() {
   const [initialData] = useState(loadInitialData);
   const [vacantes, setVacantes] = useState<Vacante[]>(initialData.vacantes);
@@ -198,6 +238,17 @@ export default function RecruitmentView() {
     initialData.candidatos.find((c) => c.estado === 'Contratado')?.id ?? null,
   );
   const [isUpdating, setIsUpdating] = useState(false);
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [currentAnalysis, setCurrentAnalysis] = useState<{
+    score: number;
+    experiencia: string;
+    especializacion: string;
+    recomendado: boolean;
+    justificacion: string;
+  } | null>(null);
+
+  const SERVICES_URL = import.meta.env.VITE_SERVICES_URL ?? 'http://localhost:3000/api/v1/hiring';
 
   const totalEntrevistas = candidatos.reduce((acc, c) => acc + c.entrevistas.length, 0);
   const totalContratados = candidatos.filter((c) => c.estado === 'Contratado').length;
@@ -217,6 +268,8 @@ export default function RecruitmentView() {
   const resetCandidateForm = () => {
     setEditingCandidateId(null);
     setCandidateForm(emptyCandidateForm);
+    setCvFile(null);
+    setCurrentAnalysis(null);
   };
 
   const handleGuardarCandidato = (e: React.FormEvent) => {
@@ -250,6 +303,11 @@ export default function RecruitmentView() {
       estado: 'En evaluacion',
       entrevistas: [],
       fechaRegistro: today(),
+      score: currentAnalysis?.score,
+      experienciaExtraida: currentAnalysis?.experiencia,
+      especializacionExtraida: currentAnalysis?.especializacion,
+      recomendado: currentAnalysis?.recomendado,
+      justificacion: currentAnalysis?.justificacion,
     };
 
     setCandidatos((prev) => [nuevoCandidato, ...prev]);
@@ -500,6 +558,63 @@ export default function RecruitmentView() {
               </select>
             </Field>
 
+            <div className="border-t border-slate-100 pt-3">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">CV del candidato (PDF)</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setCvFile(e.target.files?.[0] ?? null)}
+                  className="form-input flex-1 text-[11px] file:mr-2 file:rounded file:border-0 file:bg-[#113B7A] file:px-2 file:py-1 file:text-[10px] file:font-bold file:text-white"
+                />
+                <button
+                  type="button"
+                  disabled={!cvFile || !candidateForm.vacanteId || isAnalyzing}
+                  onClick={() => {
+                    if (!cvFile) return;
+                    const vacante = vacantes.find((v) => v.id === candidateForm.vacanteId);
+                    if (!vacante) return;
+                    analyzeCVWithAI(cvFile, vacante.requisitos, SERVICES_URL, setIsAnalyzing, (result) => {
+                      setCurrentAnalysis(result);
+                      setCandidateForm((p) => ({
+                        ...p,
+                        profesion: result.especializacion || p.profesion,
+                        experiencia: result.experiencia || p.experiencia,
+                        resumenProfesional: result.resumen || p.resumenProfesional,
+                      }));
+                      sileo.info({
+                        title: `Analisis completado - Score: ${result.score}%`,
+                        description: result.recomendado
+                          ? 'Candidato recomendado para contratacion.'
+                          : 'Candidato NO recomendado (score menor a 70%).',
+                      });
+                    });
+                  }}
+                  className="whitespace-nowrap rounded-lg px-3 py-2 text-[11px] font-bold transition disabled:opacity-50 disabled:cursor-not-allowed bg-indigo-600 text-white hover:bg-indigo-700"
+                >
+                  {isAnalyzing ? 'Analizando...' : 'Analizar CV con IA'}
+                </button>
+              </div>
+            </div>
+
+            {currentAnalysis && (
+              <div className="rounded-lg border bg-slate-50 p-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Score LLM:</span>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold ${
+                      currentAnalysis.recomendado
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-rose-50 text-rose-600 border border-rose-200'
+                    }`}
+                  >
+                    {currentAnalysis.score}%
+                    {currentAnalysis.recomendado ? ' - Recomendado' : ' - No recomendado'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Profesion">
                 <input required value={candidateForm.profesion} onChange={(e) => setCandidateForm((p) => ({ ...p, profesion: e.target.value }))} placeholder="Ej. Analista RRHH" className="form-input" />
@@ -598,6 +713,9 @@ export default function RecruitmentView() {
                   <th className="px-3 py-3">Candidato</th>
                   <th className="px-3 py-3">Vacante</th>
                   <th className="px-3 py-3">Perfil profesional</th>
+                  <th className="px-3 py-3">Score</th>
+                  <th className="px-3 py-3">Experiencia (CV)</th>
+                  <th className="px-3 py-3">Especializacion</th>
                   <th className="px-3 py-3">Estado</th>
                   <th className="px-3 py-3">Ultima entrevista</th>
                   <th className="px-3 py-3 text-right">Acciones</th>
@@ -620,6 +738,32 @@ export default function RecruitmentView() {
                         <span className="block font-bold text-slate-700">{candidato.profesion}</span>
                         <span className="mt-1 block truncate font-medium text-slate-500" title={candidato.experiencia}>
                           {candidato.experiencia}
+                        </span>
+                      </td>
+                      <td className="px-3 py-4">
+                        {candidato.score !== undefined ? (
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                              candidato.recomendado
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-rose-50 text-rose-600 border border-rose-200'
+                            }`}
+                          >
+                            {candidato.score}%
+                            {candidato.recomendado ? ' Recomendado' : ' No recomendado'}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-[11px]">Sin analizar</span>
+                        )}
+                      </td>
+                      <td className="max-w-[180px] px-3 py-4">
+                        <span className="block text-[12px] font-medium text-slate-700">
+                          {candidato.experienciaExtraida || candidato.experiencia}
+                        </span>
+                      </td>
+                      <td className="max-w-[180px] px-3 py-4">
+                        <span className="block text-[12px] font-medium text-slate-700">
+                          {candidato.especializacionExtraida || candidato.profesion}
                         </span>
                       </td>
                       <td className="px-3 py-4">
@@ -672,7 +816,7 @@ export default function RecruitmentView() {
 
                 {candidatosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center text-slate-400">
+                    <td colSpan={9} className="px-3 py-10 text-center text-slate-400">
                       No hay candidatos con los filtros actuales.
                     </td>
                   </tr>

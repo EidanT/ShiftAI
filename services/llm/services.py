@@ -7,12 +7,13 @@ currently registered.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from typing import TYPE_CHECKING
 
 from document_processing.cv.exceptions import LLMUnavailableError
-from llm.prompts import SYSTEM_RESUMEN, build_user_prompt
+from llm.prompts import SYSTEM_ANALISIS_CV, SYSTEM_RESUMEN, build_analysis_prompt, build_user_prompt
 from providers.base import ChatMessage, ChatResponse
 
 if TYPE_CHECKING:
@@ -30,7 +31,6 @@ class LLMService:
         temperature: float,
         max_tokens: int,
     ) -> None:
-       
         self._provider = provider
         self._default_model = default_model
         self._temperature = temperature
@@ -56,7 +56,7 @@ class LLMService:
                 temperature=self._temperature,
                 max_tokens=self._max_tokens,
             )
-        except Exception as exc:  
+        except Exception as exc:
             logger.warning(
                 "llm.summarize failed: %s",
                 exc,
@@ -66,7 +66,7 @@ class LLMService:
                 },
             )
             raise LLMUnavailableError(
-                "El proveedor de LLM no respondió correctamente."
+                "El proveedor de LLM no respondio correctamente."
             ) from exc
 
         elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -80,3 +80,68 @@ class LLMService:
             },
         )
         return response
+
+    async def analyze(
+        self,
+        markdown: str,
+        requirements: str,
+        *,
+        model: str | None = None,
+    ) -> dict:
+        chosen_model = model or self._default_model
+        if not chosen_model:
+            raise LLMUnavailableError(
+                "No hay modelo configurado para el analisis (LLM_DEFAULT_MODEL)."
+            )
+
+        messages = [
+            ChatMessage(role="system", content=SYSTEM_ANALISIS_CV),
+            ChatMessage(role="user", content=build_analysis_prompt(markdown, requirements)),
+        ]
+
+        started = time.perf_counter()
+        try:
+            response = await self._provider.chat(
+                model=chosen_model,
+                messages=messages,
+                temperature=0.1,
+                max_tokens=self._max_tokens,
+            )
+        except Exception as exc:
+            logger.warning(
+                "llm.analyze failed: %s",
+                exc,
+                extra={
+                    "llm_model": chosen_model,
+                    "llm_provider": self._provider.config.name,
+                },
+            )
+            raise LLMUnavailableError(
+                "El proveedor de LLM no respondio correctamente."
+            ) from exc
+
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        logger.info(
+            "llm.analyze ok",
+            extra={
+                "llm_model": chosen_model,
+                "llm_provider": self._provider.config.name,
+                "llm_elapsed_ms": elapsed_ms,
+                "llm_prompt_chars": len(markdown),
+            },
+        )
+
+        try:
+            result = json.loads(response.content)
+            if not isinstance(result, dict):
+                raise ValueError("Response is not a JSON object")
+            return result
+        except (json.JSONDecodeError, ValueError) as exc:
+            logger.warning("llm.analyze failed to parse JSON: %s", exc)
+            return {
+                "score": 0,
+                "experiencia": "No se pudo analizar el CV",
+                "especializacion": "No se pudo analizar el CV",
+                "recomendado": False,
+                "justificacion": "Error al parsear la respuesta del LLM.",
+            }
