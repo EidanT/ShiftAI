@@ -48,6 +48,11 @@ export interface Candidate {
   birth_date: string | null;
   academic_level: string;
   work_experience: string;
+  score_ia: number | null;
+  experiencia_ia: string | null;
+  especializacion_ia: string | null;
+  recomendado_ia: boolean | null;
+  resumen_ia: string | null;
 }
 
 export interface Application {
@@ -106,6 +111,11 @@ export const CreateCandidateSchema = z.object({
   birth_date: z.string().date().nullable().default(null),
   academic_level: z.string().min(1, 'El nivel academico es requerido'),
   work_experience: z.string().min(1, 'La experiencia laboral es requerida'),
+  score_ia: z.number().int().min(0).max(100).nullable().default(null),
+  experiencia_ia: z.string().nullable().default(null),
+  especializacion_ia: z.string().nullable().default(null),
+  recomendado_ia: z.boolean().nullable().default(null),
+  resumen_ia: z.string().nullable().default(null),
 });
 
 export const UpdateCandidateSchema = CreateCandidateSchema.partial().refine(

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse
 
 from config.settings import Settings, get_settings
@@ -15,7 +15,7 @@ from document_processing.cv.exceptions import (
     LLMUnavailableError,
     OCRFailureError,
 )
-from document_processing.cv.schemas import CVProcessResult, CVSummarizeResult
+from document_processing.cv.schemas import CVAnalyzeResult, CVProcessResult, CVSummarizeResult
 from document_processing.cv.service import CVProcessingService
 from llm.services import LLMService
 
@@ -139,4 +139,61 @@ async def summarize_cv(
         summary=response.content,
         model=response.model,
         provider=response.provider,
+    )
+
+
+@router.post(
+    "/analyze",
+    response_model=CVAnalyzeResult,
+    summary="Analiza un CV comparandolo con los requisitos de una vacante y devuelve score, experiencia y especializacion.",
+)
+async def analyze_cv(
+    request: Request,
+    file: UploadFile = File(..., description="PDF del CV (max 15 MB, max 200 paginas)."),
+    requirements: str = Form(..., description="Requisitos de la vacante en texto plano."),
+    settings: Settings = Depends(get_settings),
+    service: CVProcessingService = Depends(get_processing_service),
+) -> CVAnalyzeResult:
+    try:
+        processed = await asyncio.wait_for(
+            service.process_pdf(file, route="analyze"),
+            timeout=settings.cv_request_timeout_seconds,
+        )
+    except CVInputError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except CVInternalError as exc:
+        logger.exception("cv.analyze internal error: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno procesando el CV.",
+        ) from exc
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="La solicitud excedio el tiempo maximo de procesamiento.",
+        ) from exc
+
+    try:
+        llm_service = get_llm_service(request=request, settings=settings)
+        analysis = await llm_service.analyze(processed.markdown, requirements)
+    except LLMUnavailableError as exc:
+        logger.warning("cv.analyze LLM unavailable: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="El servicio de LLM no esta disponible.",
+        ) from exc
+
+    return CVAnalyzeResult(
+        filename=processed.filename,
+        score=analysis.get("score", 0),
+        experiencia=analysis.get("experiencia", ""),
+        especializacion=analysis.get("especializacion", ""),
+        recomendado=analysis.get("recomendado", False),
+        justificacion=analysis.get("justificacion", ""),
+        resumen=analysis.get("resumen", ""),
+        model="",
+        provider="",
     )

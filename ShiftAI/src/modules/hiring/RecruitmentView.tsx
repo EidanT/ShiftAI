@@ -146,6 +146,47 @@ const getLatestInterview = (application?: Application): Interview | undefined =>
 const getVacancyLabel = (vacancy?: Vacancy): string =>
   vacancy ? `Departamento ${vacancy.department_id ?? 'sin asignar'}` : 'Sin vacante';
 
+export interface CVAnalysis {
+  score: number;
+  experiencia: string;
+  especializacion: string;
+  recomendado: boolean;
+  justificacion: string;
+  resumen: string;
+}
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1').replace(/\/$/, '');
+
+async function analyzeCVWithAI(
+  file: File,
+  requirements: string,
+  onResult: (result: CVAnalysis) => void,
+  onError: (message: string) => void,
+): Promise<void> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('requirements', requirements);
+
+  const response = await fetch(`${API_BASE_URL}/hiring/candidates/analyze-cv`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let message = `Solicitud fallida (${response.status})`;
+    try {
+      const payload = (await response.json()) as { error?: string; message?: string };
+      message = payload.error ?? payload.message ?? message;
+    } catch {
+      // ignore JSON parse errors
+    }
+    throw new Error(message);
+  }
+
+  const data = (await response.json()) as CVAnalysis;
+  onResult(data);
+}
+
 export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps) {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -172,6 +213,10 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
   const [savingCandidate, setSavingCandidate] = useState(false);
   const [savingInterview, setSavingInterview] = useState(false);
   const [pendingHireId, setPendingHireId] = useState<number | null>(null);
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [currentAnalysis, setCurrentAnalysis] = useState<CVAnalysis | null>(null);
+  const [analysisByCandidateId, setAnalysisByCandidateId] = useState<Record<number, CVAnalysis>>({});
 
   const loadData = async (silent = false): Promise<boolean> => {
     if (silent) {
@@ -284,6 +329,8 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
       vacancy_id: vacancies[0] ? String(vacancies[0].id) : '',
     });
     setEditingCandidateId(null);
+    setCvFile(null);
+    setCurrentAnalysis(null);
   };
 
   const handleGuardarVacante = async (event: React.FormEvent) => {
@@ -347,6 +394,15 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
       birth_date: candidateForm.birth_date || null,
       academic_level: candidateForm.academic_level.trim(),
       work_experience: candidateForm.work_experience.trim(),
+      ...(currentAnalysis
+        ? {
+            score_ia: currentAnalysis.score,
+            experiencia_ia: currentAnalysis.experiencia,
+            especializacion_ia: currentAnalysis.especializacion,
+            recomendado_ia: currentAnalysis.recomendado,
+            resumen_ia: currentAnalysis.resumen,
+          }
+        : {}),
     };
 
     setSavingCandidate(true);
@@ -354,6 +410,13 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
     try {
       if (editingCandidateId !== null) {
         await updateCandidate(editingCandidateId, payload);
+
+        if (currentAnalysis) {
+          setAnalysisByCandidateId((current) => ({
+            ...current,
+            [editingCandidateId]: currentAnalysis,
+          }));
+        }
 
         const currentApplication = applicationByCandidateId.get(editingCandidateId);
         const applicationExists = applications.some(
@@ -372,6 +435,12 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
         onTriggerToast?.('Candidato actualizado', `${payload.first_name} fue actualizado correctamente.`, 'success');
       } else {
         const createdCandidate = await createCandidate(payload);
+        if (currentAnalysis) {
+          setAnalysisByCandidateId((current) => ({
+            ...current,
+            [createdCandidate.id]: currentAnalysis,
+          }));
+        }
         await createApplication({
           candidate_id: createdCandidate.id,
           vacancy_id: vacancyId,
@@ -756,6 +825,75 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
               </Field>
             </div>
 
+            <div className="border-t border-slate-100 pt-3">
+              <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">CV del candidato (PDF)</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(event) => setCvFile(event.target.files?.[0] ?? null)}
+                  className="form-input flex-1 text-[11px] file:mr-2 file:rounded file:border-0 file:bg-[#113B7A] file:px-2 file:py-1 file:text-[10px] file:font-bold file:text-white"
+                />
+                <button
+                  type="button"
+                  disabled={!cvFile || !candidateForm.vacancy_id || isAnalyzing}
+                  onClick={() => {
+                    if (!cvFile) return;
+                    const vacancyId = normalizeId(candidateForm.vacancy_id);
+                    const vacancy = vacancies.find((item) => item.id === vacancyId);
+                    if (!vacancy) return;
+                    const requirementsText = vacancy.requirements
+                      .map((item) => `${item.type}: ${item.description}`)
+                      .join('; ');
+                    setIsAnalyzing(true);
+                    analyzeCVWithAI(
+                      cvFile,
+                      requirementsText,
+                      (result) => {
+                        setCurrentAnalysis(result);
+                        setCandidateForm((current) => ({
+                          ...current,
+                          academic_level: result.especializacion || current.academic_level,
+                          work_experience: result.experiencia || current.work_experience,
+                        }));
+                        onTriggerToast?.(
+                          `Analisis completado - Score: ${result.score}%`,
+                          result.recomendado
+                            ? 'Candidato recomendado para contratacion.'
+                            : 'Candidato NO recomendado (score menor a 70%).',
+                          result.recomendado ? 'success' : 'error',
+                        );
+                      },
+                      (message) => {
+                        onTriggerToast?.('No se pudo analizar el CV', message, 'error');
+                      },
+                    ).finally(() => setIsAnalyzing(false));
+                  }}
+                  className="whitespace-nowrap rounded-lg px-3 py-2 text-[11px] font-bold transition disabled:cursor-not-allowed disabled:opacity-50 bg-indigo-600 text-white hover:bg-indigo-700"
+                >
+                  {isAnalyzing ? 'Analizando...' : 'Analizar CV con IA'}
+                </button>
+              </div>
+            </div>
+
+            {currentAnalysis && (
+              <div className="rounded-lg border bg-slate-50 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Score LLM</span>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold ${
+                      currentAnalysis.recomendado
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-rose-50 text-rose-600 border border-rose-200'
+                    }`}
+                  >
+                    {currentAnalysis.score}%
+                    {currentAnalysis.recomendado ? ' - Recomendado' : ' - No recomendado'}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <Field label="Nivel academico">
               <input
                 required
@@ -932,6 +1070,9 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
                   <th className="px-3 py-3">Candidato</th>
                   <th className="px-3 py-3">Vacante</th>
                   <th className="px-3 py-3">Perfil profesional</th>
+                  <th className="px-3 py-3">Score</th>
+                  <th className="px-3 py-3">Experiencia (CV)</th>
+                  <th className="px-3 py-3">Especializacion</th>
                   <th className="px-3 py-3">Estado</th>
                   <th className="px-3 py-3">Ultima entrevista</th>
                   <th className="px-3 py-3 text-right">Acciones</th>
@@ -967,6 +1108,46 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
                         <span className="block font-bold text-slate-700">{row.candidate.academic_level}</span>
                         <span className="mt-1 block truncate font-medium text-slate-500" title={row.candidate.work_experience}>
                           {row.candidate.work_experience}
+                        </span>
+                      </td>
+                      <td className="px-3 py-4">
+                        {(() => {
+                          const analysis = analysisByCandidateId[row.candidate.id];
+                          const hasScore = analysis
+                            ? true
+                            : row.candidate.score_ia !== null && row.candidate.score_ia !== undefined;
+                          const score = analysis ? analysis.score : row.candidate.score_ia;
+                          const recommended = analysis
+                            ? analysis.recomendado
+                            : row.candidate.recomendado_ia;
+                          return hasScore ? (
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                                recommended
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-rose-50 text-rose-600 border border-rose-200'
+                              }`}
+                            >
+                              {score}%
+                              {recommended ? ' Recomendado' : ' No recomendado'}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-slate-400">Sin analizar</span>
+                          );
+                        })()}
+                      </td>
+                      <td className="max-w-[180px] px-3 py-4">
+                        <span className="block text-[12px] font-medium text-slate-700">
+                          {analysisByCandidateId[row.candidate.id]?.experiencia ??
+                            row.candidate.experiencia_ia ??
+                            row.candidate.work_experience}
+                        </span>
+                      </td>
+                      <td className="max-w-[180px] px-3 py-4">
+                        <span className="block text-[12px] font-medium text-slate-700">
+                          {analysisByCandidateId[row.candidate.id]?.especializacion ??
+                            row.candidate.especializacion_ia ??
+                            row.candidate.academic_level}
                         </span>
                       </td>
                       <td className="px-3 py-4">
@@ -1040,7 +1221,7 @@ export default function RecruitmentView({ onTriggerToast }: RecruitmentViewProps
 
                 {filteredCandidateRows.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center text-slate-400">
+                    <td colSpan={9} className="px-3 py-10 text-center text-slate-400">
                       No hay candidatos con los filtros actuales.
                     </td>
                   </tr>

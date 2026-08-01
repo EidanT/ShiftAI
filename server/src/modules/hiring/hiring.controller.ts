@@ -10,6 +10,12 @@ import type {
   UpdateCandidateDto,
 } from './hiring.types';
 
+interface MulterFile {
+  buffer: Buffer;
+  mimetype: string;
+  originalname: string;
+}
+
 export class HiringController {
   constructor(private readonly service: HiringService) {}
 
@@ -112,6 +118,27 @@ export class HiringController {
         req.body as HireCandidateDto,
       );
       res.status(201).json(data);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  analyzeCV = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const file = req.file as MulterFile | undefined;
+      if (!file) {
+        res.status(400).json({ error: 'Debe subir un archivo PDF' });
+        return;
+      }
+
+      const { requirements } = req.body;
+      if (!requirements) {
+        res.status(400).json({ error: 'Debe proporcionar los requisitos de la vacante' });
+        return;
+      }
+
+      const data = await this.service.analyzeCV(file.buffer, file.originalname, requirements);
+      res.json(data);
     } catch (err) {
       next(err);
     }

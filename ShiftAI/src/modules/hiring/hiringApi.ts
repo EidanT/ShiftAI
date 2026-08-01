@@ -31,6 +31,11 @@ export interface Candidate {
   birth_date: string | null;
   academic_level: string;
   work_experience: string;
+  score_ia: number | null;
+  experiencia_ia: string | null;
+  especializacion_ia: string | null;
+  recomendado_ia: boolean | null;
+  resumen_ia: string | null;
 }
 
 export interface Interview {
@@ -85,6 +90,11 @@ export interface CreateCandidateDto {
   birth_date: string | null;
   academic_level: string;
   work_experience: string;
+  score_ia?: number | null;
+  experiencia_ia?: string | null;
+  especializacion_ia?: string | null;
+  recomendado_ia?: boolean | null;
+  resumen_ia?: string | null;
 }
 
 export type UpdateCandidateDto = Partial<CreateCandidateDto>;

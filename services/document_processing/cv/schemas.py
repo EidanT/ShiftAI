@@ -35,3 +35,17 @@ class CVSummarizeResult(BaseModel):
     summary: str
     model: str
     provider: str
+
+
+class CVAnalyzeResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    filename: str
+    score: int
+    experiencia: str
+    especializacion: str
+    recomendado: bool
+    justificacion: str
+    resumen: str
+    model: str
+    provider: str
