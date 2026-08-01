@@ -314,7 +314,7 @@ export class InMemoryHiringRepository implements IHiringRepository {
 export class SupabaseHiringRepository implements IHiringRepository {
   async findAllVacancies(): Promise<Vacancy[]> {
     const { data, error } = await getSupabase()
-      .from('vacante')
+      .from('vacantes')
       .select('*, requirements:requisito_vacante(*)')
       .order('fecha_publicacion', { ascending: false });
 
@@ -324,7 +324,7 @@ export class SupabaseHiringRepository implements IHiringRepository {
 
   async insertVacancy(dto: CreateVacancyDto): Promise<Vacancy> {
     const { data: vacancy, error } = await getSupabase()
-      .from('vacante')
+      .from('vacantes')
       .insert({
         titulo: dto.title,
         descripcion: dto.description,
@@ -355,7 +355,7 @@ export class SupabaseHiringRepository implements IHiringRepository {
 
   async findAllCandidates(): Promise<Candidate[]> {
     const { data, error } = await getSupabase()
-      .from('candidato')
+      .from('candidatos')
       .select('*')
       .order('id_candidato', { ascending: false });
 
@@ -365,7 +365,7 @@ export class SupabaseHiringRepository implements IHiringRepository {
 
   async insertCandidate(dto: CreateCandidateDto): Promise<Candidate> {
     const { data, error } = await getSupabase()
-      .from('candidato')
+      .from('candidatos')
       .insert(mapCandidateToDb(dto))
       .select()
       .single();
@@ -376,7 +376,7 @@ export class SupabaseHiringRepository implements IHiringRepository {
 
   async updateCandidate(id: number, dto: UpdateCandidateDto): Promise<Candidate> {
     const { data, error } = await getSupabase()
-      .from('candidato')
+      .from('candidatos')
       .update(mapCandidateToDb(dto))
       .eq('id_candidato', id)
       .select()
@@ -388,8 +388,8 @@ export class SupabaseHiringRepository implements IHiringRepository {
 
   async findAllApplications(): Promise<Application[]> {
     const { data, error } = await getSupabase()
-      .from('postulacion')
-      .select('*, candidate:candidato(*), vacancy:vacante(*), interviews:entrevista(*)')
+      .from('postulaciones')
+      .select('*, candidate:candidatos(*), vacancy:vacantes(*), interviews:entrevistas(*)')
       .order('fecha_postulacion', { ascending: false });
 
     if (error) throw new Error(error.message);
@@ -398,7 +398,7 @@ export class SupabaseHiringRepository implements IHiringRepository {
 
   async insertApplication(dto: CreateApplicationDto): Promise<Application> {
     const { data, error } = await getSupabase()
-      .from('postulacion')
+      .from('postulaciones')
       .insert({
         id_candidato: dto.candidate_id,
         id_vacante: dto.vacancy_id,
@@ -414,7 +414,7 @@ export class SupabaseHiringRepository implements IHiringRepository {
 
   async updateApplicationStatus(id: number, status: ApplicationStatus): Promise<Application> {
     const { data, error } = await getSupabase()
-      .from('postulacion')
+      .from('postulaciones')
       .update({ estado: status })
       .eq('id_postulacion', id)
       .select()
@@ -426,7 +426,7 @@ export class SupabaseHiringRepository implements IHiringRepository {
 
   async insertInterview(applicationId: number, dto: CreateInterviewDto): Promise<Interview> {
     const { data, error } = await getSupabase()
-      .from('entrevista')
+      .from('entrevistas')
       .insert({
         id_postulacion: applicationId,
         fecha_entrevista: dto.interview_date,
@@ -451,7 +451,7 @@ export class SupabaseHiringRepository implements IHiringRepository {
     if (!application?.candidate) throw new Error('Postulacion no encontrada');
 
     const { data: existingEmployee, error: existingEmployeeError } = await getSupabase()
-      .from('empleado')
+      .from('empleados')
       .select('*')
       .eq('id_candidato', application.candidate.id)
       .maybeSingle();
@@ -473,7 +473,7 @@ export class SupabaseHiringRepository implements IHiringRepository {
     }
 
     const { data, error } = await getSupabase()
-      .from('empleado')
+      .from('empleados')
       .insert({
         id_candidato: application.candidate.id,
         nombre: application.candidate.first_name,
@@ -526,14 +526,14 @@ function mapCandidateFromDb(row: Record<string, unknown>): Candidate {
   return {
     id: Number(row.id_candidato),
     first_name: String(row.nombre),
-    last_name: String(row.apellido),
+    last_name: row.apellido ? String(row.apellido) : '',
     national_id: String(row.cedula),
-    email: String(row.email),
+    email: String(row.correo),
     phone: String(row.telefono),
-    address: String(row.direccion),
+    address: String(row.ubicacion),
     birth_date: row.fecha_nacimiento ? String(row.fecha_nacimiento) : null,
-    academic_level: String(row.nivel_academico),
-    work_experience: String(row.experiencia_laboral),
+    academic_level: String(row.educacion),
+    work_experience: String(row.experiencia_profesional),
     score_ia: row.score_ia === null || row.score_ia === undefined ? null : Number(row.score_ia),
     experiencia_ia:
       row.experiencia_ia === null || row.experiencia_ia === undefined
@@ -548,7 +548,9 @@ function mapCandidateFromDb(row: Record<string, unknown>): Candidate {
         ? null
         : Boolean(row.recomendado_ia),
     resumen_ia:
-      row.resumen_ia === null || row.resumen_ia === undefined ? null : String(row.resumen_ia),
+      row.resumen_profesional === null || row.resumen_profesional === undefined
+        ? null
+        : String(row.resumen_profesional),
   };
 }
 
@@ -585,16 +587,18 @@ function mapCandidateToDb(dto: Partial<CreateCandidateDto>): Record<string, unkn
     ...(dto.first_name !== undefined && { nombre: dto.first_name }),
     ...(dto.last_name !== undefined && { apellido: dto.last_name }),
     ...(dto.national_id !== undefined && { cedula: dto.national_id }),
-    ...(dto.email !== undefined && { email: dto.email }),
+    ...(dto.email !== undefined && { correo: dto.email }),
     ...(dto.phone !== undefined && { telefono: dto.phone }),
-    ...(dto.address !== undefined && { direccion: dto.address }),
+    ...(dto.address !== undefined && { ubicacion: dto.address }),
     ...(dto.birth_date !== undefined && { fecha_nacimiento: dto.birth_date }),
-    ...(dto.academic_level !== undefined && { nivel_academico: dto.academic_level }),
-    ...(dto.work_experience !== undefined && { experiencia_laboral: dto.work_experience }),
+    ...(dto.academic_level !== undefined && { educacion: dto.academic_level }),
+    ...(dto.work_experience !== undefined && {
+      experiencia_profesional: dto.work_experience,
+    }),
     ...(dto.score_ia !== undefined && { score_ia: dto.score_ia }),
     ...(dto.experiencia_ia !== undefined && { experiencia_ia: dto.experiencia_ia }),
     ...(dto.especializacion_ia !== undefined && { especializacion_ia: dto.especializacion_ia }),
     ...(dto.recomendado_ia !== undefined && { recomendado_ia: dto.recomendado_ia }),
-    ...(dto.resumen_ia !== undefined && { resumen_ia: dto.resumen_ia }),
+    ...(dto.resumen_ia !== undefined && { resumen_profesional: dto.resumen_ia }),
   };
 }
