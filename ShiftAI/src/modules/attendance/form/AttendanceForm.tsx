@@ -1,102 +1,112 @@
-import React, { useState } from 'react';
-import { Empleado } from '../../../types';
+// src/modules/attendance/form/AttendanceForm.tsx
+
+import { useState } from 'react';
+import type { EmpleadoDB, CrearAsistenciaInput } from '../../../api/types';
 
 interface AttendanceFormProps {
-  empleados: Empleado[];
-  onSubmit: (data: {
-    empleadoId: string;
-    fecha: string;
-    entrada: string;
-    salida: string;
-    horas: number;
-    estado: 'Presente' | 'Tardanza' | 'Ausente';
-  }) => void;
+  empleados: EmpleadoDB[];
+  isSubmitting?: boolean;
+  onSubmit: (data: CrearAsistenciaInput) => void;
   onCancel: () => void;
 }
 
-export default function AttendanceForm({ empleados, onSubmit, onCancel }: AttendanceFormProps) {
-  const [formEmpId, setFormEmpId] = useState('EMP-2048');
-  const [formFecha, setFormFecha] = useState('2023-10-24');
-  const [formEntrada, setFormEntrada] = useState('09:00 AM');
-  const [formSalida, setFormSalida] = useState('06:00 PM');
-  const [formHoras, setFormHoras] = useState(8);
-  const [formAsistenciaEstado, setFormAsistenciaEstado] = useState<'Presente' | 'Tardanza' | 'Ausente'>('Presente');
+export default function AttendanceForm({
+  empleados,
+  isSubmitting = false,
+  onSubmit,
+  onCancel,
+}: AttendanceFormProps) {
+  const [idEmpleado, setIdEmpleado] = useState<number>(
+    empleados[0]?.id_empleado ?? 0
+  );
+  const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
+  const [horaEntrada, setHoraEntrada] = useState('09:00');
+  const [horaSalida, setHoraSalida] = useState('17:00');
+  const [horasLaboradas, setHorasLaboradas] = useState(8);
+  const [estado, setEstado] = useState<'Presente' | 'Tardanza' | 'Ausente'>('Presente');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onSubmit({
-      empleadoId: formEmpId,
-      fecha: formFecha,
-      entrada: formEntrada,
-      salida: formSalida,
-      horas: Number(formHoras),
-      estado: formAsistenciaEstado,
+      id_empleado: Number(idEmpleado),
+      fecha,
+      hora_entrada: estado === 'Ausente' ? null : horaEntrada,
+      hora_salida: estado === 'Ausente' ? null : horaSalida,
+      horas_laboradas: estado === 'Ausente' ? 0 : horasLaboradas,
+      estado,
     });
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit} className="p-6 space-y-4">
-      {/* Employee Selector row */}
+      {/* Empleado */}
       <div className="flex flex-col gap-1.5">
         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">
           Colaborador Titular
         </label>
         <select
-          value={formEmpId}
-          onChange={(e) => setFormEmpId(e.target.value)}
-          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700 focus:outline-none"
+          value={idEmpleado}
+          onChange={(e) => setIdEmpleado(Number(e.target.value))}
+          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
           required
+          disabled={isSubmitting}
         >
           {empleados.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nombre} ({e.id})
+            <option key={e.id_empleado} value={e.id_empleado}>
+              {e.nombre} {e.apellido} (#{e.id_empleado})
             </option>
           ))}
         </select>
       </div>
 
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">
-              Fecha
-            </label>
-            <input
-              type="date"
-              value={formFecha}
-              onChange={(e) => setFormFecha(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700"
-              required
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">
-              Estatus del Registro
-            </label>
-            <select
-              value={formAsistenciaEstado}
-              onChange={(e) => setFormAsistenciaEstado(e.target.value as any)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700"
-            >
-              <option value="Presente">Presente</option>
-              <option value="Tardanza">Tardanza</option>
-              <option value="Ausente">Ausente</option>
-            </select>
-          </div>
+      {/* Fecha y Estado */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">
+            Fecha
+          </label>
+          <input
+            type="date"
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
+            required
+            disabled={isSubmitting}
+          />
         </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">
+            Estatus
+          </label>
+          <select
+            value={estado}
+            onChange={(e) =>
+              setEstado(e.target.value as 'Presente' | 'Tardanza' | 'Ausente')
+            }
+            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
+            disabled={isSubmitting}
+          >
+            <option value="Presente">Presente</option>
+            <option value="Tardanza">Tardanza</option>
+            <option value="Ausente">Ausente</option>
+          </select>
+        </div>
+      </div>
 
+      {/* Horas (oculto si es Ausente) */}
+      {estado !== 'Ausente' && (
         <div className="grid grid-cols-3 gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">
               Hora Entrada
             </label>
             <input
-              type="text"
-              placeholder="e.g. 09:00 AM"
-              value={formEntrada}
-              onChange={(e) => setFormEntrada(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 text-center"
+              type="time"
+              value={horaEntrada}
+              onChange={(e) => setHoraEntrada(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 text-center focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
               required
+              disabled={isSubmitting}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -104,12 +114,12 @@ export default function AttendanceForm({ empleados, onSubmit, onCancel }: Attend
               Hora Salida
             </label>
             <input
-              type="text"
-              placeholder="e.g. 06:05 PM"
-              value={formSalida}
-              onChange={(e) => setFormSalida(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 text-center"
+              type="time"
+              value={horaSalida}
+              onChange={(e) => setHoraSalida(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 text-center focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
               required
+              disabled={isSubmitting}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -119,29 +129,34 @@ export default function AttendanceForm({ empleados, onSubmit, onCancel }: Attend
             <input
               type="number"
               step="0.1"
-              value={formHoras}
-              onChange={(e) => setFormHoras(Number(e.target.value))}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 text-center"
+              min="0"
+              max="24"
+              value={horasLaboradas}
+              onChange={(e) => setHorasLaboradas(Number(e.target.value))}
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-semibold text-slate-700 text-center focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
               required
+              disabled={isSubmitting}
             />
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Form Footer Action triggers */}
+      {/* Botones */}
       <div className="flex gap-3 pt-4 border-t border-slate-100 select-none font-bold text-xs">
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-center"
+          disabled={isSubmitting}
+          className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-center disabled:opacity-60"
         >
           Descartar
         </button>
         <button
           type="submit"
-          className="flex-1 py-3.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl text-center shadow-md hover:scale-[1.02] active:scale-95 transition-all"
+          disabled={isSubmitting}
+          className="flex-1 py-3.5 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl text-center shadow-md hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-60 disabled:hover:scale-100"
         >
-          Aplicar Registro
+          {isSubmitting ? 'Guardando...' : 'Aplicar Registro'}
         </button>
       </div>
     </form>

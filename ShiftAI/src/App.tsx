@@ -284,14 +284,8 @@ export default function App() {
               )}
 
               {moduloActivo === 'attendance' && (
-                <AttendanceView 
-                  asistencias={asistencias}
-                  empleados={empleados}
-                  busqueda={busquedaGlobal}
-                  onEliminarRegistro={handleEliminarAsistencia}
-                  onSubmitManualAttendance={handleAttendanceSubmit}
-                />
-              )}
+                  <AttendanceView />
+                )}
 
               {moduloActivo === 'vacations' && (
                 <LicensesView 

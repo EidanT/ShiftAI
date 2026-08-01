@@ -89,6 +89,11 @@ const seedCandidates: Candidate[] = [
     birth_date: '1993-04-12',
     academic_level: 'Licenciatura en Psicologia Industrial',
     work_experience: '3 anos en reclutamiento masivo y entrevistas por competencias.',
+    score_ia: null,
+    experiencia_ia: null,
+    especializacion_ia: null,
+    recomendado_ia: null,
+    resumen_ia: null,
   },
   {
     id: 2,
@@ -101,6 +106,11 @@ const seedCandidates: Candidate[] = [
     birth_date: '1998-09-20',
     academic_level: 'Tecnologo en Redes',
     work_experience: '1 ano dando soporte a usuarios internos.',
+    score_ia: null,
+    experiencia_ia: null,
+    especializacion_ia: null,
+    recomendado_ia: null,
+    resumen_ia: null,
   },
 ];
 
@@ -440,6 +450,28 @@ export class SupabaseHiringRepository implements IHiringRepository {
     const application = applications.find((item) => item.id === applicationId);
     if (!application?.candidate) throw new Error('Postulacion no encontrada');
 
+    const { data: existingEmployee, error: existingEmployeeError } = await getSupabase()
+      .from('empleado')
+      .select('*')
+      .eq('id_candidato', application.candidate.id)
+      .maybeSingle();
+
+    if (existingEmployeeError) throw new Error(existingEmployeeError.message);
+
+    await this.updateApplicationStatus(applicationId, 'Contratado');
+
+    if (existingEmployee) {
+      return {
+        id: existingEmployee.id_empleado,
+        candidate_id: existingEmployee.id_candidato,
+        first_name: existingEmployee.nombre,
+        last_name: existingEmployee.apellido,
+        national_id: existingEmployee.cedula,
+        hire_date: existingEmployee.fecha_ingreso,
+        status: existingEmployee.estado,
+      };
+    }
+
     const { data, error } = await getSupabase()
       .from('empleado')
       .insert({
@@ -458,7 +490,6 @@ export class SupabaseHiringRepository implements IHiringRepository {
       .single();
 
     if (error) throw new Error(error.message);
-    await this.updateApplicationStatus(applicationId, 'Contratado');
 
     return {
       id: data.id_empleado,
@@ -503,6 +534,21 @@ function mapCandidateFromDb(row: Record<string, unknown>): Candidate {
     birth_date: row.fecha_nacimiento ? String(row.fecha_nacimiento) : null,
     academic_level: String(row.nivel_academico),
     work_experience: String(row.experiencia_laboral),
+    score_ia: row.score_ia === null || row.score_ia === undefined ? null : Number(row.score_ia),
+    experiencia_ia:
+      row.experiencia_ia === null || row.experiencia_ia === undefined
+        ? null
+        : String(row.experiencia_ia),
+    especializacion_ia:
+      row.especializacion_ia === null || row.especializacion_ia === undefined
+        ? null
+        : String(row.especializacion_ia),
+    recomendado_ia:
+      row.recomendado_ia === null || row.recomendado_ia === undefined
+        ? null
+        : Boolean(row.recomendado_ia),
+    resumen_ia:
+      row.resumen_ia === null || row.resumen_ia === undefined ? null : String(row.resumen_ia),
   };
 }
 
@@ -545,5 +591,10 @@ function mapCandidateToDb(dto: Partial<CreateCandidateDto>): Record<string, unkn
     ...(dto.birth_date !== undefined && { fecha_nacimiento: dto.birth_date }),
     ...(dto.academic_level !== undefined && { nivel_academico: dto.academic_level }),
     ...(dto.work_experience !== undefined && { experiencia_laboral: dto.work_experience }),
+    ...(dto.score_ia !== undefined && { score_ia: dto.score_ia }),
+    ...(dto.experiencia_ia !== undefined && { experiencia_ia: dto.experiencia_ia }),
+    ...(dto.especializacion_ia !== undefined && { especializacion_ia: dto.especializacion_ia }),
+    ...(dto.recomendado_ia !== undefined && { recomendado_ia: dto.recomendado_ia }),
+    ...(dto.resumen_ia !== undefined && { resumen_ia: dto.resumen_ia }),
   };
 }

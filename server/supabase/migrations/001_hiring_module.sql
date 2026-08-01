@@ -47,6 +47,11 @@ create table if not exists public.candidato (
   fecha_nacimiento date,
   nivel_academico text not null,
   experiencia_laboral text not null,
+  score_ia integer,
+  experiencia_ia text,
+  especializacion_ia text,
+  recomendado_ia boolean,
+  resumen_ia text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
