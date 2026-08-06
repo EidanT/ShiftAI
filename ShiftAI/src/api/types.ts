@@ -100,3 +100,83 @@ export interface ActualizarAsistenciaInput {
 export interface AttendanceFilters {
   fecha?: string;
 }
+
+export type PayrollPeriodType = 'Mensual' | 'Quincenal';
+
+export type PayrollStatus = 'Generada' | 'Aprobada' | 'Pagada' | 'Anulada';
+
+export interface PayrollDetailDB {
+  id: number;
+  payroll_id: number;
+  employee_id: number;
+  employee_name: string;
+  employee_national_id: string;
+  position: string | null;
+  department: string | null;
+  base_salary: number;
+  overtime_hours: number;
+  overtime_amount: number;
+  gross_pay: number;
+  afp: number;
+  sfs: number;
+  isr: number;
+  other_deductions: number;
+  total_deductions: number;
+  net_pay: number;
+}
+
+export interface PayrollRunDB {
+  id: number;
+  period_start: string;
+  period_end: string;
+  period_type: PayrollPeriodType;
+  status: PayrollStatus;
+  total_gross: number;
+  total_deductions: number;
+  total_net: number;
+  created_at: string | null;
+  // Solo viene poblado en GET /payroll/runs/:id
+  details?: PayrollDetailDB[];
+}
+
+export interface GeneratePayrollInput {
+  period_start: string; // 'YYYY-MM-DD'
+  period_end: string;   // 'YYYY-MM-DD'
+  period_type?: PayrollPeriodType; // default 'Mensual' en backend
+}
+
+export interface UpdatePayrollStatusInput {
+  status: PayrollStatus;
+}
+
+export interface PayReceiptDB {
+  receipt_number: string;
+  issued_at: string;
+  period: {
+    start: string;
+    end: string;
+    type: PayrollPeriodType;
+  };
+  status: PayrollStatus;
+  employee: {
+    id: number;
+    name: string;
+    national_id: string;
+    position: string | null;
+    department: string | null;
+  };
+  earnings: {
+    base_salary: number;
+    overtime_hours: number;
+    overtime_amount: number;
+    gross_pay: number;
+  };
+  deductions: {
+    afp: number;
+    sfs: number;
+    isr: number;
+    other: number;
+    total: number;
+  };
+  net_pay: number;
+}
