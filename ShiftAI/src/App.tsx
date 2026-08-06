@@ -32,6 +32,7 @@ import AttendanceView from './modules/attendance/AttendanceView';
 import LicensesView from './modules/licenses/LicensesView';
 import HistoryQueriesView from './modules/history/HistoryQueriesView';
 import RecruitmentView from './modules/hiring/RecruitmentView';
+import PayrollView from './modules/payroll/PayrollView';
 
 
 
@@ -311,8 +312,12 @@ export default function App() {
                 <RecruitmentView />
               )}
 
+              {moduloActivo === 'payroll' && (
+                <PayrollView />
+              )}
+
               {/* Other modules are beautifully styled on FutureModulesView */}
-              {!['dashboard', 'attendance', 'vacations', 'history', 'recruitment'].includes(moduloActivo) && (
+              {!['dashboard', 'attendance', 'vacations', 'history', 'recruitment', 'payroll'].includes(moduloActivo) && (
                 <FutureModulesView 
                   moduloId={moduloActivo}
                   empleados={empleados}
