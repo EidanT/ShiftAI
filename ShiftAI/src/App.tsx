@@ -33,6 +33,7 @@ import LicensesView from './modules/licenses/LicensesView';
 import HistoryQueriesView from './modules/history/HistoryQueriesView';
 import RecruitmentView from './modules/hiring/RecruitmentView';
 import PayrollView from './modules/payroll/PayrollView';
+import TrainingView from './modules/training/TrainingView';
 
 
 
@@ -316,8 +317,12 @@ export default function App() {
                 <PayrollView />
               )}
 
+              {moduloActivo === 'training' && (
+                <TrainingView busqueda={busquedaGlobal} />
+              )}
+
               {/* Other modules are beautifully styled on FutureModulesView */}
-              {!['dashboard', 'attendance', 'vacations', 'history', 'recruitment', 'payroll'].includes(moduloActivo) && (
+              {!['dashboard', 'attendance', 'vacations', 'history', 'recruitment', 'payroll', 'training'].includes(moduloActivo) && (
                 <FutureModulesView 
                   moduloId={moduloActivo}
                   empleados={empleados}
