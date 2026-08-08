@@ -8,6 +8,8 @@ const envSchema = z.object({
   SUPABASE_SECRET_KEY: z.string().min(1).optional(),
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1).optional(),
   SUPABASE_JWKS_URL: z.string().url().optional(),
+  TRAINING_STORAGE: z.enum(['local', 'supabase']).default('local'),
+  TRAINING_DATA_PATH: z.string().min(1).default('.local-data/training.json'),
 });
 
 const result = envSchema.safeParse(process.env);
