@@ -60,7 +60,7 @@ export default function DashboardView({
       {/* Upper Context & Action Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Dashboard Principal (En proceso)</h1>
+          <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Dashboard</h1>
           <p className="text-sm text-[#45474c] mt-1">Resumen general de administración de personal y tendencias del mes.</p>
         </div>
         <div className="flex items-center gap-3">

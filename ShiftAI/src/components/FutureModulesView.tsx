@@ -20,7 +20,6 @@ import {
   Compass,
   FileBadge,
   Mail,
-  ChevronRight,
   UserCheck2,
   BookmarkCheck
 } from 'lucide-react';
@@ -35,6 +34,7 @@ import {
 interface FutureModulesViewProps {
   moduloId: ModuloId;
   empleados: Empleado[];
+  onAgregarEmpleado?: () => void;
   busqueda?: string;
 }
 
@@ -76,7 +76,6 @@ export default function FutureModulesView({
                     <th className="p-4">Departamento</th>
                     <th className="p-4">Ingreso</th>
                     <th className="p-4">Estado</th>
-                    <th className="p-4 text-right pr-6">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-600">
@@ -102,11 +101,6 @@ export default function FutureModulesView({
                           <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
                           {emp.estado}
                         </span>
-                      </td>
-                      <td className="p-4 text-right pr-6">
-                        <button className="text-slate-400 hover:text-indigo-600 transition-colors" title="Ver Expediente Digital">
-                          <ChevronRight className="w-5 h-5 ml-auto" />
-                        </button>
                       </td>
                     </tr>
                   ))}
@@ -370,9 +364,6 @@ export default function FutureModulesView({
           {/* Header */}
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Evaluaciones de Desempeño</h1>
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-lg flex items-center gap-1.5 leading-none shadow-sm select-none">
-              <Sparkles className="w-3.5 h-3.5" /> Próxima versión
-            </span>
           </div>
           <p className="text-sm text-[#45474c]">Definición de metas, KPI's técnicos y retroalimentación interactiva del personal.</p>
 
