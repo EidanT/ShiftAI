@@ -321,7 +321,6 @@ export default function App() {
                   moduloId={moduloActivo}
                   empleados={empleados}
                   busqueda={busquedaGlobal}
-                  onAgregarEmpleado={handleAgregarColaborador}
                 />
               )}
             </motion.div>

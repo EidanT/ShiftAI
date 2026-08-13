@@ -20,7 +20,6 @@ import {
   Compass,
   FileBadge,
   Mail,
-  ChevronRight,
   UserCheck2,
   BookmarkCheck
 } from 'lucide-react';
@@ -42,7 +41,6 @@ interface FutureModulesViewProps {
 export default function FutureModulesView({ 
   moduloId, 
   empleados, 
-  onAgregarEmpleado,
   busqueda = ''
 }: FutureModulesViewProps) {
   
@@ -65,13 +63,6 @@ export default function FutureModulesView({
               <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Plantilla de Empleados</h1>
               <p className="text-sm text-[#45474c] mt-1">Gestión del padrón, contrataciones vigentes y fichas técnicas del personal.</p>
             </div>
-            <button 
-              onClick={onAgregarEmpleado}
-              className="bg-[#0F172A] hover:bg-slate-800 text-white font-semibold text-xs px-4.5 py-2.5 rounded-lg flex items-center gap-2 shadow-md transition-all uppercase tracking-wider"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Contratar Empleado</span>
-            </button>
           </div>
 
           <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col">
@@ -85,7 +76,6 @@ export default function FutureModulesView({
                     <th className="p-4">Departamento</th>
                     <th className="p-4">Ingreso</th>
                     <th className="p-4">Estado</th>
-                    <th className="p-4 text-right pr-6">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-600">
@@ -111,11 +101,6 @@ export default function FutureModulesView({
                           <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
                           {emp.estado}
                         </span>
-                      </td>
-                      <td className="p-4 text-right pr-6">
-                        <button className="text-slate-400 hover:text-indigo-600 transition-colors" title="Ver Expediente Digital">
-                          <ChevronRight className="w-5 h-5 ml-auto" />
-                        </button>
                       </td>
                     </tr>
                   ))}
