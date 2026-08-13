@@ -10,12 +10,18 @@ export type LicenseStatus = z.infer<typeof LicenseStatusSchema>;
 export interface License {
   id: number;
   employee_id: number;
+  employee_name: string;
   type: LicenseType;
   start_date: string;
   end_date: string;
   reason: string | null;
   status: LicenseStatus;
   approved_by: string | null;
+}
+
+export interface EmployeeOption {
+  id: number;
+  name: string;
 }
 
 export const CreateLicenseSchema = z

@@ -4,6 +4,7 @@ import type {
   License,
   UpdateLicenseDto,
   UpdateLicenseStatusDto,
+  EmployeeOption,
 } from './licenses.types';
 
 export class LicensesService {
@@ -15,6 +16,10 @@ export class LicensesService {
 
   async getLicenseById(id: number): Promise<License> {
     return this.repository.findById(id);
+  }
+
+  async getEmployees(): Promise<EmployeeOption[]> {
+    return this.repository.findEmployees();
   }
 
   async createLicense(data: CreateLicenseDto): Promise<License> {
