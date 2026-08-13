@@ -35,14 +35,12 @@ import {
 interface FutureModulesViewProps {
   moduloId: ModuloId;
   empleados: Empleado[];
-  onAgregarEmpleado?: () => void;
   busqueda?: string;
 }
 
 export default function FutureModulesView({ 
   moduloId, 
   empleados, 
-  onAgregarEmpleado,
   busqueda = ''
 }: FutureModulesViewProps) {
   
@@ -65,13 +63,6 @@ export default function FutureModulesView({
               <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Plantilla de Empleados</h1>
               <p className="text-sm text-[#45474c] mt-1">Gestión del padrón, contrataciones vigentes y fichas técnicas del personal.</p>
             </div>
-            <button 
-              onClick={onAgregarEmpleado}
-              className="bg-[#0F172A] hover:bg-slate-800 text-white font-semibold text-xs px-4.5 py-2.5 rounded-lg flex items-center gap-2 shadow-md transition-all uppercase tracking-wider"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Contratar Empleado</span>
-            </button>
           </div>
 
           <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden flex flex-col">
