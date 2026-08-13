@@ -59,7 +59,7 @@ interface SolicitudRow {
 
 interface CapacitacionRow {
   id: number;
-  estado: 'Inscrito' | 'En progreso' | 'Completado' | 'Cancelado';
+  estado: 'Pendiente' | 'En progreso' | 'Completado' | 'Vencido';
   fecha_inscripcion: string;
   fecha_completado: string | null;
   capacitaciones: {
@@ -144,26 +144,42 @@ export default function HistoryQueriesView() {
     setLoadingDetalle(true);
     setErrorMsg(null);
 
-    const [asistenciaRes, solicitudesRes, capacitacionesRes] = await Promise.all([
-      supabase
-        .from('asistencia')
-        .select('id_asistencia, id_empleado, fecha, hora_entrada, hora_salida, horas_laboradas, estado')
-        .eq('id_empleado', idEmpleado)
-        .order('fecha', { ascending: false }),
-      supabase
-        .from('solicitudes_personal')
-        .select('id, id_empleado, tipo, fecha_inicio, fecha_final, motivo, estado, aprobado_por')
-        .eq('id_empleado', idEmpleado)
-        .order('fecha_inicio', { ascending: false }),
-      supabase
-        .from('empleado_capacitacion')
-        .select(
-          `id, estado, fecha_inscripcion, fecha_completado,
-           capacitaciones ( id_capacitacion, titulo, categoria, duracion_horas, modalidad )`
-        )
-        .eq('id_empleado', idEmpleado)
-        .order('fecha_inscripcion', { ascending: false })
-    ]);
+    const [asistenciaRes, solicitudesRes, capacitacionesRes] =
+  await Promise.all([
+    supabase
+      .from('asistencia')
+      .select(
+        'id_asistencia, id_empleado, fecha, hora_entrada, hora_salida, horas_laboradas, estado'
+      )
+      .eq('id_empleado', idEmpleado)
+      .order('fecha', { ascending: false }),
+
+    supabase
+      .from('solicitudes_personal')
+      .select(
+        'id, id_empleado, tipo, fecha_inicio, fecha_final, motivo, estado, aprobado_por'
+      )
+      .eq('id_empleado', idEmpleado)
+      .order('fecha_inicio', { ascending: false }),
+
+    supabase
+      .from('capacitaciones_empleados')
+      .select(
+        `id:id_asignacion,
+         estado,
+         fecha_inscripcion:fecha_asignacion,
+         fecha_completado:fecha_finalizacion,
+         capacitaciones:cursos_capacitacion (
+           id_capacitacion:id_curso,
+           titulo:nombre,
+           categoria,
+           duracion_horas,
+           modalidad
+         )`
+      )
+      .eq('id_empleado', idEmpleado)
+      .order('fecha_asignacion', { ascending: false })
+  ]);
 
     const errors = [asistenciaRes.error, solicitudesRes.error, capacitacionesRes.error].filter(Boolean);
     if (errors.length > 0) {
