@@ -58,13 +58,13 @@ interface SolicitudRow {
 }
 
 interface CapacitacionRow {
-  id: number;
-  estado: 'Inscrito' | 'En progreso' | 'Completado' | 'Cancelado';
-  fecha_inscripcion: string;
-  fecha_completado: string | null;
-  capacitaciones: {
-    id_capacitacion: number;
-    titulo: string;
+  id_asignacion: number;
+  estado: 'Pendiente' | 'En progreso' | 'Completado' | 'Vencido';
+  fecha_asignacion: string;
+  fecha_finalizacion: string | null;
+  cursos_capacitacion: {
+    id_curso: number;
+    nombre: string;
     categoria: string | null;
     duracion_horas: number;
     modalidad: string;
@@ -156,13 +156,13 @@ export default function HistoryQueriesView() {
         .eq('id_empleado', idEmpleado)
         .order('fecha_inicio', { ascending: false }),
       supabase
-        .from('empleado_capacitacion')
+        .from('capacitaciones_empleados')
         .select(
-          `id, estado, fecha_inscripcion, fecha_completado,
-           capacitaciones ( id_capacitacion, titulo, categoria, duracion_horas, modalidad )`
+          `id_asignacion, estado, fecha_asignacion, fecha_finalizacion,
+           cursos_capacitacion ( id_curso, nombre, categoria, duracion_horas, modalidad )`
         )
         .eq('id_empleado', idEmpleado)
-        .order('fecha_inscripcion', { ascending: false })
+        .order('fecha_asignacion', { ascending: false })
     ]);
 
     const errors = [asistenciaRes.error, solicitudesRes.error, capacitacionesRes.error].filter(Boolean);
@@ -229,11 +229,11 @@ export default function HistoryQueriesView() {
 
   const filteredCapacitaciones = useMemo(() => {
     return capacitaciones.filter(c => {
-      const t = c.capacitaciones;
+      const t = c.cursos_capacitacion;
       if (!t) return false;
       return (
         !searchTerm ||
-        t.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        t.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (t.categoria || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
     });
@@ -287,10 +287,10 @@ export default function HistoryQueriesView() {
     } else if (activeTab === 'capacitaciones') {
       headers = ['Curso / Programa', 'Categoría', 'Horas', 'Modalidad', 'Estado'];
       rows = filteredCapacitaciones.map(c => [
-        `"${c.capacitaciones?.titulo || ''}"`,
-        c.capacitaciones?.categoria || '--',
-        c.capacitaciones?.duracion_horas ?? 0,
-        c.capacitaciones?.modalidad || 'Virtual',
+        `"${c.cursos_capacitacion?.nombre || ''}"`,
+        c.cursos_capacitacion?.categoria || '--',
+        c.cursos_capacitacion?.duracion_horas ?? 0,
+        c.cursos_capacitacion?.modalidad || 'Virtual',
         c.estado
       ]);
     } else {
@@ -392,10 +392,10 @@ export default function HistoryQueriesView() {
               .map(
                 c => `
               <tr>
-                <td><strong>${c.capacitaciones?.titulo}</strong></td>
-                <td>${c.capacitaciones?.categoria || '--'}</td>
-                <td>${c.capacitaciones?.duracion_horas ?? 0} hrs</td>
-                <td>${c.capacitaciones?.modalidad || 'Virtual'}</td>
+                <td><strong>${c.cursos_capacitacion?.nombre}</strong></td>
+                <td>${c.cursos_capacitacion?.categoria || '--'}</td>
+                <td>${c.cursos_capacitacion?.duracion_horas ?? 0} hrs</td>
+                <td>${c.cursos_capacitacion?.modalidad || 'Virtual'}</td>
                 <td><span class="badge aprobado">${c.estado}</span></td>
               </tr>`
               )
@@ -882,14 +882,14 @@ export default function HistoryQueriesView() {
               <div className="space-y-3">
                 {filteredCapacitaciones.length > 0 ? (
                   filteredCapacitaciones.map(c => (
-                    <div key={c.id} className="p-4 rounded-xl border border-slate-200 bg-white flex items-center justify-between">
+                    <div key={c.id_asignacion} className="p-4 rounded-xl border border-slate-200 bg-white flex items-center justify-between">
                       <div className="space-y-1">
                         <span className="text-[10px] font-extrabold uppercase text-indigo-600 tracking-wider">
-                          {c.capacitaciones?.categoria || 'General'}
+                          {c.cursos_capacitacion?.categoria || 'General'}
                         </span>
-                        <h4 className="font-bold text-slate-800 text-xs">{c.capacitaciones?.titulo}</h4>
+                        <h4 className="font-bold text-slate-800 text-xs">{c.cursos_capacitacion?.nombre}</h4>
                         <p className="text-[11px] text-slate-500 font-medium">
-                          Duración: {c.capacitaciones?.duracion_horas ?? 0} hrs | Modalidad: {c.capacitaciones?.modalidad || 'Virtual'}
+                          Duración: {c.cursos_capacitacion?.duracion_horas ?? 0} hrs | Modalidad: {c.cursos_capacitacion?.modalidad || 'Virtual'}
                         </p>
                       </div>
                       <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">
