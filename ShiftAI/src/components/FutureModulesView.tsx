@@ -379,9 +379,6 @@ export default function FutureModulesView({
           {/* Header */}
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Evaluaciones de Desempeño</h1>
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-lg flex items-center gap-1.5 leading-none shadow-sm select-none">
-              <Sparkles className="w-3.5 h-3.5" /> Próxima versión
-            </span>
           </div>
           <p className="text-sm text-[#45474c]">Definición de metas, KPI's técnicos y retroalimentación interactiva del personal.</p>
 
