@@ -22,3 +22,4 @@ function createMissingSupabaseClient(): SupabaseClient {
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabasePublishableKey)
   : createMissingSupabaseClient();
+
