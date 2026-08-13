@@ -294,13 +294,8 @@ export default function App() {
                  <LicensesModule />
         )}
 
-              {moduloActivo === 'history' && (
-                <HistoryQueriesView 
-                  empleados={empleados}
-                  asistencias={asistencias}
-                  recentActividades={RECIENTES}
-                  cursos={CAPACITACIONES_CURSOS}
-                />
+{moduloActivo === 'history' && (
+                <HistoryQueriesView />
               )}
 
               {moduloActivo === 'recruitment' && (
@@ -321,7 +316,6 @@ export default function App() {
                   moduloId={moduloActivo}
                   empleados={empleados}
                   busqueda={busquedaGlobal}
-                  onAgregarEmpleado={handleAgregarColaborador}
                 />
               )}
             </motion.div>

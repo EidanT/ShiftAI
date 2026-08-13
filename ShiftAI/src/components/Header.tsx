@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Bell, Sun, Moon, HelpCircle, ChevronDown, LogOut } from 'lucide-react';
+import { Search, Bell, Sun, Moon, ChevronDown, LogOut } from 'lucide-react';
 import { ModuloId } from '../types';
 import { useAuth } from '../context/useAuth';
 
@@ -115,11 +115,6 @@ export default function Header({
           title="Modo Oscuro"
         >
           {darkMode ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5" />}
-        </button>
-
-        {/* Global Help system info icon */}
-        <button className="p-2 rounded-full text-slate-500 hover:text-[#6366F1] hover:bg-slate-100 transition-colors hidden sm:block">
-          <HelpCircle className="w-5 h-5" />
         </button>
 
         {/* Vertical divider */}

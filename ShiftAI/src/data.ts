@@ -254,5 +254,8 @@ export const PAGOS_NOMINA = [
 export const EVALUACIONES_CONSENSO = [
   { empleado: 'Ana Martínez', depto: 'Desarrollo IT', calificacion: 'Excepcional (4.9/5)', periodo: 'Evaluación Anual 2025' },
   { empleado: 'Carlos Ramírez', depto: 'Ventas', calificacion: 'Favorable (4.1/5)', periodo: 'Evaluación Trimestral Q1' },
-  { empleado: 'Laura Mendoza', depto: 'Desarrollo IT', calificacion: 'Sobresaliente (4.6/5)', periodo: 'Evaluación Anual 2025' }
+  { empleado: 'Laura Mendoza', depto: 'Desarrollo IT', calificacion: 'Sobresaliente (4.6/5)', periodo: 'Evaluación Anual 2025' },
+  { empleado: 'Miguel Ortega', depto: 'Operaciones', calificacion: 'Favorable (4.2/5)', periodo: 'Evaluación Semestral 2026' },
+  { empleado: 'Sofía Castillo', depto: 'Recursos Humanos', calificacion: 'Sobresaliente (4.7/5)', periodo: 'Evaluación Trimestral Q2' },
+  { empleado: 'Javier Núñez', depto: 'Finanzas', calificacion: 'Plan de Mejora (3.4/5)', periodo: 'Evaluación Semestral 2026' }
 ];
