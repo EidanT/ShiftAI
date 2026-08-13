@@ -18,7 +18,8 @@
     "multer": "^2.2.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "sileo": "^0.1.5"
+    "sileo": "^0.1.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
