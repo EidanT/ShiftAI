@@ -32,6 +32,9 @@ import AttendanceView from './modules/attendance/AttendanceView';
 import LicensesView from './modules/licenses/LicensesView';
 import HistoryQueriesView from './modules/history/HistoryQueriesView';
 import RecruitmentView from './modules/hiring/RecruitmentView';
+import PayrollView from './modules/payroll/PayrollView';
+import TrainingView from './modules/training/TrainingView';
+import LicensesModule from './modules/licenses/LicensesModule';
 
 
 
@@ -288,15 +291,8 @@ export default function App() {
                 )}
 
               {moduloActivo === 'vacations' && (
-                <LicensesView 
-                  licencias={licencias}
-                  empleados={empleados}
-                  busqueda={busquedaGlobal}
-                  onAprobarLicencia={handleAprobarLicencia}
-                  onRechazarLicencia={handleRechazarLicencia}
-                  onSubmitManualLicense={handleLicenseSubmit}
-                />
-              )}
+                 <LicensesModule />
+        )}
 
               {moduloActivo === 'history' && (
                 <HistoryQueriesView 
@@ -311,8 +307,16 @@ export default function App() {
                 <RecruitmentView />
               )}
 
+              {moduloActivo === 'payroll' && (
+                <PayrollView />
+              )}
+
+              {moduloActivo === 'training' && (
+                <TrainingView busqueda={busquedaGlobal} />
+              )}
+
               {/* Other modules are beautifully styled on FutureModulesView */}
-              {!['dashboard', 'attendance', 'vacations', 'history', 'recruitment'].includes(moduloActivo) && (
+              {!['dashboard', 'attendance', 'vacations', 'history', 'recruitment', 'payroll', 'training'].includes(moduloActivo) && (
                 <FutureModulesView 
                   moduloId={moduloActivo}
                   empleados={empleados}
