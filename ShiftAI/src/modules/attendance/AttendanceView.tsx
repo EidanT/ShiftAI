@@ -1,491 +1,681 @@
 // src/modules/attendance/AttendanceView.tsx
-//
-// Vista principal del modulo de Gestion de Asistencia.
-// Autosuficiente: maneja sus propios datos via TanStack Query + Supabase.
-// No necesita props desde App.tsx.
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { sileo } from 'sileo';
+import { useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 import {
   Calendar,
   Building2,
   User,
-  FileText,
   FileSpreadsheet,
-  Plus,
+  Search,
+  ChevronDown,
   Eye,
   Edit2,
-  Trash2,
-  ChevronDown,
-  CheckCircle,
-  AlertTriangle,
-  MinusCircle,
-  Clock,
-  X,
-  RefreshCw,
+  MoreHorizontal,
+  Download,
 } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
 
-import {
-  getAsistencias,
-  getEmpleados,
-  crearAsistencia,
-  eliminarAsistencia,
-} from '../../api/attendance';
-import type { AsistenciaDB, EmpleadoDB } from '../../api/types';
-import AttendanceForm from './form/AttendanceForm';
+// =========================
+// Tipos
+// =========================
+
+interface EmpleadoEstatico {
+  id: string;
+  iniciales: string;
+  nombre: string;
+  email: string;
+  cargo: string;
+  departamento: string;
+  ingreso: string;
+  estado: 'Activo' | 'Inactivo';
+}
+
+// =========================
+// Datos estáticos de empleados
+// =========================
+
+const empleadosEstaticos: EmpleadoEstatico[] = [
+  {
+    id: 'EMP-001',
+    iniciales: 'AM',
+    nombre: 'Ana Martínez',
+    email: 'ana.martinez@sigrh.com',
+    cargo: 'Frontend Developer',
+    departamento: 'Desarrollo IT',
+    ingreso: '12-Oct-2022',
+    estado: 'Activo',
+  },
+  {
+    id: 'EMP-042',
+    iniciales: 'CR',
+    nombre: 'Carlos Ramírez',
+    email: 'carlos.ramirez@sigrh.com',
+    cargo: 'Ejecutivo de Cuentas',
+    departamento: 'Ventas',
+    ingreso: '05-Ene-2021',
+    estado: 'Activo',
+  },
+  {
+    id: 'EMP-112',
+    iniciales: 'LM',
+    nombre: 'Laura Mendoza',
+    email: 'laura.mendoza@sigrh.com',
+    cargo: 'Analista de UI/UX',
+    departamento: 'Desarrollo IT',
+    ingreso: '01-Mar-2023',
+    estado: 'Activo',
+  },
+  {
+    id: 'EMP-2048',
+    iniciales: 'AG',
+    nombre: 'Ana García',
+    email: 'ana.garcia@sigrh.com',
+    cargo: 'Desarrolladora Frontend Senior',
+    departamento: 'Desarrollo IT',
+    ingreso: '10-Ago-2019',
+    estado: 'Activo',
+  },
+  {
+    id: 'EMP-989',
+    iniciales: 'JP',
+    nombre: 'Juan Pérez',
+    email: 'juan.perez@sigrh.com',
+    cargo: 'Soporte Técnico',
+    departamento: 'Desarrollo IT',
+    ingreso: '15-May-2023',
+    estado: 'Activo',
+  },
+  {
+    id: 'EMP-512',
+    iniciales: 'CR',
+    nombre: 'Carlos Ruiz',
+    email: 'carlos.ruiz@sigrh.com',
+    cargo: 'Ingeniero Comercial',
+    departamento: 'Ventas',
+    ingreso: '11-Sep-2022',
+    estado: 'Activo',
+  },
+  {
+    id: 'EMP-304',
+    iniciales: 'RS',
+    nombre: 'Roberto Silva',
+    email: 'roberto.silva@sigrh.com',
+    cargo: 'Gerente Administrativo',
+    departamento: 'Administración',
+    ingreso: '22-Ago-2018',
+    estado: 'Activo',
+  },
+  {
+    id: 'EMP-899',
+    iniciales: 'EP',
+    nombre: 'Esteban Paz',
+    email: 'esteban.paz@sigrh.com',
+    cargo: 'QA Automation Specialist',
+    departamento: 'Desarrollo IT',
+    ingreso: '18-Jun-2026',
+    estado: 'Activo',
+  },
+];
+
+// =========================
+// Componente
+// =========================
 
 export default function AttendanceView() {
-  const queryClient = useQueryClient();
-
-  // ─── Filtros locales ────────────────────────────────────────────────────────
-  const [showManualModal, setShowManualModal] = useState(false);
-  const [selectedFecha, setSelectedFecha] = useState(
-    new Date().toISOString().split('T')[0]
+  const [selectedDepto, setSelectedDepto] = useState(
+    'Todos los departamentos'
   );
-  const [selectedDepto, setSelectedDepto] = useState('Todos los departamentos');
-  const [selectedEmpID, setSelectedEmpID] = useState('');
 
-  // ─── Queries ────────────────────────────────────────────────────────────────
-  const {
-    data: empleados = [],
-    isLoading: loadingEmpleados,
-  } = useQuery<EmpleadoDB[]>({
-    queryKey: ['empleados'],
-    queryFn: getEmpleados,
-  });
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const {
-    data: asistencias = [],
-    isLoading: loadingAsistencias,
-    isError,
-    refetch,
-  } = useQuery<AsistenciaDB[]>({
-    queryKey: ['asistencias', selectedFecha],
-    queryFn: () => getAsistencias({ fecha: selectedFecha }),
-  });
+  // =========================
+  // Departamentos
+  // =========================
 
-  // ─── Mutations ──────────────────────────────────────────────────────────────
-  const crearMutation = useMutation({
-    mutationFn: crearAsistencia,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['asistencias'] });
-      sileo.success({
-        title: 'Asistencia registrada',
-        description: 'El registro fue guardado correctamente.',
-      });
-      setShowManualModal(false);
-    },
-    onError: (err: Error) => {
-      sileo.error({
-        title: 'Error al registrar',
-        description: err.message,
-      });
-    },
-  });
+  const departamentos = useMemo(() => {
+    return Array.from(
+      new Set(empleadosEstaticos.map((empleado) => empleado.departamento))
+    );
+  }, []);
 
-  const eliminarMutation = useMutation({
-    mutationFn: eliminarAsistencia,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['asistencias'] });
-      sileo.info({
-        title: 'Registro anulado',
-        description: 'El horario acumulado ya no figura en nomina.',
-      });
-    },
-    onError: (err: Error) => {
-      sileo.error({
-        title: 'Error al eliminar',
-        description: err.message,
-      });
-    },
-  });
+  // =========================
+  // Filtrado
+  // =========================
 
-  // ─── Helpers ────────────────────────────────────────────────────────────────
-  function getEmpleado(id_empleado: number): EmpleadoDB | undefined {
-    return empleados.find((e) => e.id_empleado === id_empleado);
-  }
+  const empleadosFiltrados = useMemo(() => {
+    return empleadosEstaticos.filter((empleado) => {
+      const texto = searchTerm.toLowerCase().trim();
 
-  function getNombreCompleto(emp: EmpleadoDB) {
-    return `${emp.nombre} ${emp.apellido}`;
-  }
+      const coincideBusqueda =
+        !texto ||
+        empleado.nombre.toLowerCase().includes(texto) ||
+        empleado.id.toLowerCase().includes(texto) ||
+        empleado.email.toLowerCase().includes(texto) ||
+        empleado.cargo.toLowerCase().includes(texto);
 
-  function getIniciales(emp: EmpleadoDB) {
-    return `${emp.nombre[0]}${emp.apellido[0]}`.toUpperCase();
-  }
+      const coincideDepartamento =
+        selectedDepto === 'Todos los departamentos' ||
+        empleado.departamento === selectedDepto;
 
- function getNombreCargo(emp: EmpleadoDB) {
-  return emp.cargos?.[0]?.nombre ?? '—';
-}
+      return coincideBusqueda && coincideDepartamento;
+    });
+  }, [searchTerm, selectedDepto]);
 
-function getNombreDepto(emp: EmpleadoDB) {
-  return emp.departamentos?.[0]?.nombre ?? '—';
-}
+  // =========================
+  // Exportar Excel
+  // =========================
 
-  // ─── Lista de departamentos unicos para el filtro ────────────────────────────
-  const deptos = Array.from(
-  new Set(
-    empleados
-      .map((e) => e.departamentos?.[0]?.nombre)
-      .filter(
-        (nombre): nombre is string =>
-          typeof nombre === 'string'
-      )
-  )
-);
+  const exportarExcel = () => {
+    const datosExcel = empleadosFiltrados.map((empleado) => ({
+      'ID / Código': empleado.id,
+      Empleado: empleado.nombre,
+      Correo: empleado.email,
+      'Cargo / Puesto': empleado.cargo,
+      Departamento: empleado.departamento,
+      Ingreso: empleado.ingreso,
+      Estado: empleado.estado,
+    }));
 
-  // ─── Filtrado local ─────────────────────────────────────────────────────────
-  const filtradas = asistencias.filter((item) => {
-    const emp = getEmpleado(item.id_empleado);
-    if (!emp) return false;
+    const worksheet = XLSX.utils.json_to_sheet(datosExcel);
 
-    const nombre = getNombreCompleto(emp).toLowerCase();
-    const depto = getNombreDepto(emp);
+    const columnWidths = [
+      { wch: 14 },
+      { wch: 25 },
+      { wch: 35 },
+      { wch: 35 },
+      { wch: 20 },
+      { wch: 16 },
+      { wch: 14 },
+    ];
 
-    const empMatch =
-      !selectedEmpID ||
-      nombre.includes(selectedEmpID.toLowerCase()) ||
-      String(emp.id_empleado).includes(selectedEmpID);
+    worksheet['!cols'] = columnWidths;
 
-    const deptoMatch =
-      selectedDepto === 'Todos los departamentos' ||
-      depto === selectedDepto;
+    const workbook = XLSX.utils.book_new();
 
-    return empMatch && deptoMatch;
-  });
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      'Empleados'
+    );
 
-  const isLoading = loadingEmpleados || loadingAsistencias;
+    XLSX.writeFile(
+      workbook,
+      'empleados_gestion_asistencia.xlsx'
+    );
+  };
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
+  // =========================
+  // Render
+  // =========================
+
   return (
     <div className="space-y-6 animate-fade-in text-left">
 
-      {/* Titulo & Acciones */}
+      {/* =========================================
+          Encabezado
+      ========================================== */}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+
         <div>
           <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">
             Gestión de Asistencia
           </h1>
+
           <p className="text-sm text-[#45474c] mt-1">
             Monitoreo de entradas, salidas, horas acumuladas y estatus del personal.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex bg-white border border-[#E2E8F0] rounded-lg overflow-hidden shadow-sm">
-            <button className="px-3 py-2 flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors border-r border-slate-200">
-              <FileSpreadsheet className="w-4 h-4 text-[#E11D48]" />
-              <span>PDF</span>
-            </button>
-            <button className="px-3 py-2 flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-              <FileText className="w-4 h-4 text-[#10B981]" />
-              <span>Excel</span>
-            </button>
-          </div>
+        <div className="flex items-center gap-3">
+
+          {/* Exportar Excel */}
 
           <button
-            onClick={() => refetch()}
-            className="p-2 rounded-lg bg-white border border-[#E2E8F0] text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shadow-sm"
-            title="Recargar datos"
+            onClick={exportarExcel}
+            className="bg-white border border-[#E2E8F0] hover:bg-emerald-50 hover:border-emerald-200 text-slate-600 hover:text-emerald-600 font-semibold text-xs px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-sm transition-all"
+            title="Exportar empleados a Excel"
           >
-            <RefreshCw className="w-4 h-4" />
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Exportar Excel</span>
           </button>
 
-          <button
-            onClick={() => setShowManualModal(true)}
-            className="bg-[#0F172A] hover:bg-slate-800 text-white font-semibold text-xs px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-md hover:scale-105 active:scale-95 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Registro Manual</span>
-          </button>
         </div>
       </div>
 
-      {/* Barra de filtros */}
-      <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* =========================================
+          Información de empleados
+      ========================================== */}
 
-          {/* Fecha */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-              Fecha de consulta
-            </label>
-            <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus-within:border-[#6366F1] focus-within:bg-white transition-all">
-              <Calendar className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
-              <input
-                type="date"
-                value={selectedFecha}
-                onChange={(e) => setSelectedFecha(e.target.value)}
-                className="w-full bg-transparent border-none text-xs text-slate-800 focus:outline-none focus:ring-0 cursor-pointer"
-              />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+        {/* Total */}
+
+        <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Total empleados
+              </p>
+
+              <p className="text-2xl font-bold text-[#0F172A] mt-1">
+                {empleadosEstaticos.length}
+              </p>
             </div>
-          </div>
 
-          {/* Departamento — dinamico desde la BD */}
+            <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <User className="w-5 h-5" />
+            </div>
+
+          </div>
+        </div>
+
+        {/* Activos */}
+
+        <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Empleados activos
+              </p>
+
+              <p className="text-2xl font-bold text-emerald-600 mt-1">
+                {
+                  empleadosEstaticos.filter(
+                    (empleado) => empleado.estado === 'Activo'
+                  ).length
+                }
+              </p>
+            </div>
+
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <User className="w-5 h-5" />
+            </div>
+
+          </div>
+        </div>
+
+        {/* Departamentos */}
+
+        <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                Departamentos
+              </p>
+
+              <p className="text-2xl font-bold text-[#0F172A] mt-1">
+                {departamentos.length}
+              </p>
+            </div>
+
+            <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+              <Building2 className="w-5 h-5" />
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      {/* =========================================
+          Filtros
+      ========================================== */}
+
+      <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 shadow-sm">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Departamento */}
+
           <div className="flex flex-col gap-1.5">
+
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
               Departamento
             </label>
+
             <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus-within:border-[#6366F1] focus-within:bg-white transition-all">
+
               <Building2 className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+
               <select
                 value={selectedDepto}
                 onChange={(e) => setSelectedDepto(e.target.value)}
                 className="w-full bg-transparent border-none text-xs text-slate-800 focus:outline-none focus:ring-0 cursor-pointer appearance-none"
               >
-                <option>Todos los departamentos</option>
-                {deptos.map((d) => (
-                  <option key={d} value={d}>{d}</option>
+
+                <option>
+                  Todos los departamentos
+                </option>
+
+                {departamentos.map((departamento) => (
+                  <option
+                    key={departamento}
+                    value={departamento}
+                  >
+                    {departamento}
+                  </option>
                 ))}
+
               </select>
+
               <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none" />
+
             </div>
           </div>
 
-          {/* Buscar empleado */}
+          {/* Buscar */}
+
           <div className="flex flex-col gap-1.5">
+
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-              Buscar por Empleado / ID
+              Buscar empleado
             </label>
+
             <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus-within:border-[#6366F1] focus-within:bg-white transition-all">
-              <User className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+
+              <Search className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
+
               <input
                 type="text"
-                placeholder="Nombre o ID..."
-                value={selectedEmpID}
-                onChange={(e) => setSelectedEmpID(e.target.value)}
+                placeholder="Nombre, ID, correo o cargo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-transparent border-none text-xs text-slate-800 focus:outline-none focus:ring-0 placeholder:text-slate-400"
               />
+
             </div>
           </div>
+
         </div>
+
       </div>
 
-      {/* Tabla principal */}
-      <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden flex flex-col">
+      {/* =========================================
+          Tabla de empleados
+      ========================================== */}
 
-        {/* Cargando */}
-        {isLoading && (
-          <div className="p-12 text-center">
-            <div className="w-8 h-8 border-2 border-slate-200 border-t-[#6366F1] rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-slate-400 font-semibold">Cargando registros...</p>
-          </div>
-        )}
+      <div className="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden">
 
-        {/* Error */}
-        {isError && !isLoading && (
-          <div className="p-12 text-center">
-            <AlertTriangle className="w-12 h-12 stroke-1 text-rose-300 mx-auto mb-3" />
-            <p className="text-sm font-bold text-rose-500">Error al cargar los registros</p>
-            <p className="text-xs text-slate-500 mt-1">
-              Verifica tu conexion o contacta al administrador.
-            </p>
-            <button
-              onClick={() => refetch()}
-              className="mt-4 text-xs font-semibold text-indigo-600 hover:underline"
-            >
-              Reintentar
-            </button>
-          </div>
-        )}
+        {/* Cabecera de tabla */}
 
-        {/* Sin resultados */}
-        {!isLoading && !isError && filtradas.length === 0 && (
-          <div className="p-12 text-center text-slate-400">
-            <Clock className="w-12 h-12 stroke-1 text-slate-300 mx-auto mb-3" />
-            <p className="text-sm font-bold">No hay registros para esta fecha</p>
-            <p className="text-xs text-slate-500 mt-1">
-              Cambia la fecha o agrega un registro manual.
+        <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+
+          <div>
+            <h2 className="text-sm font-bold text-[#0F172A]">
+              Empleados registrados
+            </h2>
+
+            <p className="text-xs text-slate-400 mt-0.5">
+              Información estática del personal para gestión de asistencia.
             </p>
           </div>
-        )}
 
-        {/* Tabla con datos */}
-        {!isLoading && !isError && filtradas.length > 0 && (
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse min-w-[850px]">
+          <div className="flex items-center gap-2">
+
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              Mostrando
+            </span>
+
+            <span className="text-xs font-bold text-[#0F172A]">
+              {empleadosFiltrados.length}
+            </span>
+
+            <span className="text-[10px] text-slate-400">
+              empleados
+            </span>
+
+          </div>
+
+        </div>
+
+        {/* Tabla */}
+
+        {empleadosFiltrados.length === 0 ? (
+
+          <div className="p-12 text-center">
+
+            <Search className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+
+            <p className="text-sm font-bold text-slate-500">
+              No se encontraron empleados
+            </p>
+
+            <p className="text-xs text-slate-400 mt-1">
+              Intenta cambiar los filtros de búsqueda.
+            </p>
+
+          </div>
+
+        ) : (
+
+          <div className="overflow-x-auto">
+
+            <table className="w-full text-left border-collapse min-w-[1100px]">
+
               <thead>
+
                 <tr className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200">
-                  <th className="p-4 pl-6 w-12 text-center">
-                    <input type="checkbox" className="rounded border-slate-300 text-[#6366F1] focus:ring-[#6366F1]" />
+
+                  <th className="p-4 pl-6">
+                    ID / Código
                   </th>
-                  <th className="p-4">Empleado</th>
-                  <th className="p-4">Departamento / Cargo</th>
-                  <th className="p-4 text-center">Entrada</th>
-                  <th className="p-4 text-center">Salida</th>
-                  <th className="p-4 text-center">Horas laboradas</th>
-                  <th className="p-4 text-center">Estatus</th>
-                  <th className="p-4 text-right pr-6">Acciones</th>
+
+                  <th className="p-4">
+                    Empleado
+                  </th>
+
+                  <th className="p-4">
+                    Cargo / Puesto
+                  </th>
+
+                  <th className="p-4">
+                    Departamento
+                  </th>
+
+                  <th className="p-4">
+                    Ingreso
+                  </th>
+
+                  <th className="p-4 text-center">
+                    Estado
+                  </th>
+
+                  <th className="p-4 text-right pr-6">
+                    Acciones
+                  </th>
+
                 </tr>
+
               </thead>
+
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-600">
-                {filtradas.map((item) => {
-                  const emp = getEmpleado(item.id_empleado);
-                  if (!emp) return null;
 
-                  const isPresente = item.estado === 'Presente';
-                  const isTardanza = item.estado === 'Tardanza';
-                  const isAusente = item.estado === 'Ausente';
+                {empleadosFiltrados.map((empleado) => (
 
-                  return (
-                    <tr
-                      key={item.id_asistencia}
-                      className="hover:bg-slate-50/50 transition-colors group"
-                    >
-                      <td className="p-4 pl-6 text-center">
-                        <input type="checkbox" className="rounded border-slate-300 text-[#6366F1] focus:ring-[#6366F1]" />
-                      </td>
+                  <tr
+                    key={empleado.id}
+                    className="hover:bg-slate-50/60 transition-colors group"
+                  >
 
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 border border-slate-200 flex items-center justify-center font-bold text-[11px] shrink-0">
-                            {getIniciales(emp)}
-                          </div>
-                          <div className="flex flex-col text-left">
-                            <span className="font-bold text-[#0F172A] group-hover:text-[#6366F1] transition-colors truncate max-w-[150px]">
-                              {getNombreCompleto(emp)}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-sans tracking-wide">
-                              #{emp.id_empleado}
-                            </span>
-                          </div>
+                    {/* ID */}
+
+                    <td className="p-4 pl-6">
+
+                      <span className="font-mono text-xs font-bold text-slate-500">
+                        {empleado.id}
+                      </span>
+
+                    </td>
+
+                    {/* Empleado */}
+
+                    <td className="p-4">
+
+                      <div className="flex items-center gap-3">
+
+                        <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-bold text-[11px] shrink-0">
+                          {empleado.iniciales}
                         </div>
-                      </td>
 
-                      <td className="p-4">
-                        <div className="flex flex-col text-left">
-                          <span className="text-slate-700 font-bold">
-                            {getNombreDepto(emp)}
+                        <div className="flex flex-col">
+
+                          <span className="font-bold text-[#0F172A] group-hover:text-[#6366F1] transition-colors">
+                            {empleado.nombre}
                           </span>
-                          <span className="text-[10px] text-slate-400 mt-0.5">
-                            {getNombreCargo(emp)}
+
+                          <span className="text-[10px] text-slate-400 font-normal mt-0.5">
+                            {empleado.email}
                           </span>
+
                         </div>
-                      </td>
 
-                      <td className={`p-4 text-center font-semibold font-mono ${isAusente ? 'text-slate-400 italic' : ''}`}>
-                        {item.hora_entrada ?? '--:--'}
-                      </td>
+                      </div>
 
-                      <td className={`p-4 text-center font-semibold font-mono ${isAusente ? 'text-slate-400 italic' : ''}`}>
-                        {item.hora_salida ?? '--:--'}
-                      </td>
+                    </td>
 
-                      <td className={`p-4 text-center font-bold font-mono ${Number(item.horas_laboradas) > 9 ? 'text-indigo-600' : ''}`}>
-                        {Number(item.horas_laboradas) > 0
-                          ? `${item.horas_laboradas} Hrs`
-                          : '--'}
-                      </td>
+                    {/* Cargo */}
 
-                      <td className="p-4 text-center">
-                        {isPresente && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-[#10B981] border border-emerald-100">
-                            <CheckCircle className="w-3 h-3" />
-                            Presente
-                          </span>
-                        )}
-                        {isTardanza && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-[#F59E0B] border border-amber-100">
-                            <AlertTriangle className="w-3 h-3" />
-                            Tardanza
-                          </span>
-                        )}
-                        {isAusente && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-[#E11D48] border border-rose-100">
-                            <MinusCircle className="w-3 h-3" />
-                            Ausente
-                          </span>
-                        )}
-                      </td>
+                    <td className="p-4">
 
-                      <td className="p-4 text-right pr-6">
-                        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                          <button
-                            className="p-1.5 rounded text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                            title="Ver ficha"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            className="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                            title="Editar tiempos"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => eliminarMutation.mutate(item.id_asistencia)}
-                            disabled={eliminarMutation.isPending}
-                            className="p-1.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-40"
-                            title="Anular registro"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                      <span className="text-slate-700 font-bold">
+                        {empleado.cargo}
+                      </span>
+
+                    </td>
+
+                    {/* Departamento */}
+
+                    <td className="p-4">
+
+                      <div className="flex items-center gap-2">
+
+                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
+
+                        <span className="text-slate-600">
+                          {empleado.departamento}
+                        </span>
+
+                      </div>
+
+                    </td>
+
+                    {/* Ingreso */}
+
+                    <td className="p-4">
+
+                      <div className="flex items-center gap-2">
+
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+
+                        <span className="text-slate-600 font-medium">
+                          {empleado.ingreso}
+                        </span>
+
+                      </div>
+
+                    </td>
+
+                    {/* Estado */}
+
+                    <td className="p-4 text-center">
+
+                      {empleado.estado === 'Activo' ? (
+
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+
+                          Activo
+
+                        </span>
+
+                      ) : (
+
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+
+                          Inactivo
+
+                        </span>
+
+                      )}
+
+                    </td>
+
+                    {/* Acciones */}
+
+                    <td className="p-4 text-right pr-6">
+
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+
+                        <button
+                          type="button"
+                          className="p-1.5 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                          title="Ver empleado"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          className="p-1.5 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                          title="Editar empleado"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                          title="Más opciones"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+
+                      </div>
+
+                    </td>
+
+                  </tr>
+
+                ))}
+
               </tbody>
+
             </table>
+
           </div>
+
         )}
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
-          <span className="text-xs text-slate-500 font-medium select-none">
-            Mostrando {filtradas.length} de {asistencias.length} registros
+        {/* =========================================
+            Footer
+        ========================================== */}
+
+        <div className="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50">
+
+          <span className="text-xs text-slate-500 font-medium">
+            Mostrando {empleadosFiltrados.length} de {empleadosEstaticos.length} empleados
           </span>
-          <div className="flex gap-2">
-            <button
-              className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-50 rounded text-xs font-semibold text-slate-500 disabled:opacity-40 transition-colors"
-              disabled
-            >
-              Anterior
-            </button>
-            <button className="px-3 py-1 border border-indigo-600 bg-indigo-50 text-[#6366F1] font-bold rounded text-xs shadow-sm">
-              1
-            </button>
-            <button className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-50 rounded text-xs font-semibold text-slate-500 transition-colors">
-              Siguiente
-            </button>
-          </div>
+
+          <button
+            type="button"
+            onClick={exportarExcel}
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 hover:bg-emerald-50 hover:border-emerald-200 text-slate-600 hover:text-emerald-600 rounded-lg text-xs font-semibold transition-colors shadow-sm"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Exportar datos
+          </button>
+
         </div>
+
       </div>
 
-      {/* Modal de registro manual */}
-      <AnimatePresence>
-        {showManualModal && (
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ ease: 'easeInOut', duration: 0.2 }}
-              className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-left flex flex-col"
-            >
-              <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-[#F8FAFC]">
-                <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">
-                  Registro Administrativo de Asistencia
-                </h2>
-                <button
-                  onClick={() => setShowManualModal(false)}
-                  className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <AttendanceForm
-                empleados={empleados}
-                isSubmitting={crearMutation.isPending}
-                onSubmit={(data) => crearMutation.mutate(data)}
-                onCancel={() => setShowManualModal(false)}
-              />
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

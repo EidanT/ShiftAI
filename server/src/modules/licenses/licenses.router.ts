@@ -19,6 +19,8 @@ export function createLicensesRouter(): Router {
 
   router.get('/', controller.getLicenses);
 
+  router.get('/employees', controller.getEmployees);
+
   router.get('/:id', controller.getLicenseById);
 
   router.post('/', writeLimiter, validate(CreateLicenseSchema), controller.createLicense);

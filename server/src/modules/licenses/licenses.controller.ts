@@ -14,6 +14,15 @@ export class LicensesController {
     }
   };
 
+  getEmployees = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = await this.service.getEmployees();
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   getLicenseById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const data = await this.service.getLicenseById(Number(req.params.id));

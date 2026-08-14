@@ -11,12 +11,18 @@ export type LicenseStatus =
 export interface License {
   id: number;
   employee_id: number;
+  employee_name: string;
   type: LicenseType;
   start_date: string;
   end_date: string;
   reason: string | null;
   status: LicenseStatus;
   approved_by: string | null;
+}
+
+export interface EmployeeOption {
+  id: number;
+  name: string;
 }
 
 export interface CreateLicenseDto {
@@ -97,6 +103,10 @@ async function request<T>(
 
 export function getLicenses(): Promise<License[]> {
   return request<License[]>('/licenses');
+}
+
+export function getEmployees(): Promise<EmployeeOption[]> {
+  return request<EmployeeOption[]>('/licenses/employees');
 }
 
 export function getLicenseById(

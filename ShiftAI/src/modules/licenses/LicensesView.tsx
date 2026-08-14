@@ -13,11 +13,13 @@ import {
 
 import {
   type CreateLicenseDto,
+  type EmployeeOption,
   type License,
   type LicenseStatus,
   type LicenseType,
   createLicense,
   deleteLicense,
+  getEmployees,
   getLicenses,
   updateLicense,
   updateLicenseStatus,
@@ -109,6 +111,8 @@ export default function LicensesView({
   onTriggerToast,
 }: LicensesViewProps) {
   const [licenses, setLicenses] = useState<License[]>([]);
+  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -126,7 +130,7 @@ export default function LicensesView({
   const [form, setForm] =
     useState<LicenseFormState>(emptyForm);
 
-  const loadLicenses = async (
+  const loadData = async (
     silent = false,
   ): Promise<boolean> => {
     if (silent) {
@@ -138,21 +142,26 @@ export default function LicensesView({
     try {
       setError(null);
 
-      const data = await getLicenses();
+      const [licensesData, employeesData] =
+        await Promise.all([
+          getLicenses(),
+          getEmployees(),
+        ]);
 
-      setLicenses(data);
+      setLicenses(licensesData);
+      setEmployees(employeesData);
 
       return true;
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : 'No fue posible cargar las solicitudes.';
+          : 'No fue posible cargar la información.';
 
       setError(message);
 
       onTriggerToast?.(
-        'No se pudieron cargar las solicitudes',
+        'No se pudo cargar la información',
         message,
         'error',
       );
@@ -165,7 +174,7 @@ export default function LicensesView({
   };
 
   useEffect(() => {
-    void loadLicenses();
+    void loadData();
   }, []);
 
   const filteredLicenses = useMemo(() => {
@@ -175,6 +184,7 @@ export default function LicensesView({
       const text = [
         license.id,
         license.employee_id,
+        license.employee_name,
         license.type,
         license.reason ?? '',
         license.status,
@@ -244,7 +254,7 @@ export default function LicensesView({
     if (!employeeId) {
       onTriggerToast?.(
         'Empleado requerido',
-        'Debe indicar un ID de empleado válido.',
+        'Debe seleccionar un empleado.',
         'error',
       );
 
@@ -291,7 +301,7 @@ export default function LicensesView({
       }
 
       resetForm();
-      await loadLicenses(true);
+      await loadData(true);
     } catch (err) {
       const message =
         err instanceof Error
@@ -326,7 +336,7 @@ export default function LicensesView({
         'success',
       );
 
-      await loadLicenses(true);
+      await loadData(true);
     } catch (err) {
       const message =
         err instanceof Error
@@ -369,7 +379,7 @@ export default function LicensesView({
         'success',
       );
 
-      await loadLicenses(true);
+      await loadData(true);
     } catch (err) {
       const message =
         err instanceof Error
@@ -385,12 +395,12 @@ export default function LicensesView({
   };
 
   const handleRefresh = async () => {
-    const success = await loadLicenses(true);
+    const success = await loadData(true);
 
     if (success) {
       onTriggerToast?.(
         'Datos actualizados',
-        'Las solicitudes fueron recargadas desde Supabase.',
+        'Las solicitudes y colaboradores fueron recargados.',
         'info',
       );
     }
@@ -574,7 +584,7 @@ export default function LicensesView({
 
                   <td className="px-3 py-4">
                     <span className="block font-bold text-slate-700">
-                      EMP-{license.employee_id}
+                      {license.employee_name}
                     </span>
 
                     <span className="mt-1 block text-[10px] text-slate-400">
@@ -730,11 +740,9 @@ export default function LicensesView({
               className="space-y-4 p-6"
             >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Field label="ID del empleado">
-                  <input
+                <Field label="Colaborador">
+                  <select
                     required
-                    type="number"
-                    min="1"
                     value={form.employee_id}
                     onChange={(event) =>
                       setForm((current) => ({
@@ -742,9 +750,21 @@ export default function LicensesView({
                         employee_id: event.target.value,
                       }))
                     }
-                    placeholder="Ej. 12"
                     className="form-input"
-                  />
+                  >
+                    <option value="">
+                      Seleccione un colaborador
+                    </option>
+
+                    {employees.map((employee) => (
+                      <option
+                        key={employee.id}
+                        value={employee.id}
+                      >
+                        {employee.name}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
 
                 <Field label="Tipo de solicitud">

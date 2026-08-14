@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Bell, ChevronDown, LogOut } from 'lucide-react';
+import { Search, Bell, Sun, Moon, ChevronDown, LogOut } from 'lucide-react';
 import { ModuloId } from '../types';
 import { useAuth } from '../context/useAuth';
 
@@ -8,6 +8,8 @@ interface HeaderProps {
   collapsed: boolean;
   busqueda: string;
   onBusquedaChange: (val: string) => void;
+  darkMode: boolean;
+  setDarkMode: (val: boolean) => void;
 }
 
 export default function Header({ 
@@ -15,6 +17,8 @@ export default function Header({
   collapsed, 
   busqueda, 
   onBusquedaChange, 
+  darkMode, 
+  setDarkMode 
 }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -103,6 +107,15 @@ export default function Header({
             </div>
           )}
         </div>
+
+        {/* Theme Toggle option */}
+        <button 
+          onClick={() => setDarkMode(!darkMode)}
+          className="p-2 rounded-full text-slate-500 hover:text-[#6366F1] hover:bg-slate-100 transition-colors hidden sm:block"
+          title="Modo Oscuro"
+        >
+          {darkMode ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5" />}
+        </button>
 
         {/* Vertical divider */}
         <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
