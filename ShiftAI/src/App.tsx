@@ -32,7 +32,6 @@ export default function App() {
   const [moduloActivo, setModuloActivo] = useState<ModuloId>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [busquedaGlobal, setBusquedaGlobal] = useState('');
-  const [darkMode, setDarkMode] = useState(false);
 
   // Entities state managers
   const [empleados, setEmpleados] = useState<Empleado[]>(EMPLEADOS);
@@ -70,7 +69,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen font-sans bg-[#F8FAFC] overflow-hidden ${darkMode ? 'dark' : ''}`}>
+    <div className="min-h-screen font-sans bg-[#F8FAFC] overflow-hidden">
       {/* Collapsible Sidebar block */}
       <Sidebar 
         moduloActivo={moduloActivo} 
